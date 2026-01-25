@@ -1,0 +1,22 @@
+[project]
+name = "pyguard"
+version = "0.1.0"
+description = "A strict Python style linter and formatter"
+readme = "DESIGN.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*_tests.py", "test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
