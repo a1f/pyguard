@@ -29,7 +29,7 @@ class ConfigLoader:
     """Loads and validates PyGuard configuration."""
 
     @staticmethod
-    def find_config_file(start_path: Path | None = None) -> Path | None:
+    def find_config_file(*, start_path: Path | None = None) -> Path | None:
         """
         Find pyproject.toml by walking up from start_path.
 
@@ -52,7 +52,7 @@ class ConfigLoader:
         return None
 
     @staticmethod
-    def load(path: Path | None = None) -> PyGuardConfig:
+    def load(*, path: Path | None = None) -> PyGuardConfig:
         """
         Load configuration from pyproject.toml.
 
@@ -98,6 +98,7 @@ class ConfigLoader:
             errors.append(
                 f"python_version must be a string, got {type(python_version).__name__}"
             )
+            python_version = "3.11"
 
         # Parse include patterns
         include: tuple[str, ...] = ("**/*.py",)
@@ -179,12 +180,20 @@ class ConfigLoader:
                     except ValueError:
                         valid: list[str] = [s.value for s in Severity]
                         errors.append(f"rules.{key} must be one of {valid}")
-                elif isinstance(value, dict) and "severity" in value:
-                    try:
-                        severities[rule_code] = Severity(value["severity"].lower())
-                    except ValueError:
-                        valid = [s.value for s in Severity]
-                        errors.append(f"rules.{key}.severity must be one of {valid}")
+                elif isinstance(value, dict):
+                    severity_value: Any = value.get("severity")
+                    if severity_value is not None:
+                        if not isinstance(severity_value, str):
+                            errors.append(
+                                f"rules.{key}.severity must be a string, "
+                                f"got {type(severity_value).__name__}"
+                            )
+                        else:
+                            try:
+                                severities[rule_code] = Severity(severity_value.lower())
+                            except ValueError:
+                                valid = [s.value for s in Severity]
+                                errors.append(f"rules.{key}.severity must be one of {valid}")
 
         # Parse TYP001 options
         typ001_data: dict[str, Any] = data.get("TYP001", {})
@@ -247,16 +256,20 @@ class ConfigLoader:
         raw_disallow: Any = data.get("disallow", [])
         disallow: frozenset[str]
         if isinstance(raw_disallow, list):
-            invalid_codes: list[str] = [
-                c for c in raw_disallow if c.upper() not in RULE_CODES
-            ]
-            if invalid_codes:
-                errors.append(
-                    f"ignores.disallow contains unknown rule codes: {invalid_codes}"
-                )
-            disallow = frozenset(
-                c.upper() for c in raw_disallow if c.upper() in RULE_CODES
-            )
+            # Validate each entry is a string before calling .upper()
+            valid_codes: list[str] = []
+            for entry in raw_disallow:
+                if not isinstance(entry, str):
+                    errors.append(
+                        f"ignores.disallow entries must be strings, "
+                        f"got {type(entry).__name__}: {entry!r}"
+                    )
+                    continue
+                if entry.upper() not in RULE_CODES:
+                    errors.append(f"ignores.disallow contains unknown rule code: {entry}")
+                else:
+                    valid_codes.append(entry.upper())
+            disallow = frozenset(valid_codes)
         else:
             errors.append("ignores.disallow must be a list")
             disallow = frozenset()
@@ -273,7 +286,7 @@ class ConfigLoader:
         )
 
 
-def load_config(path: Path | None = None) -> PyGuardConfig:
+def load_config(*, path: Path | None = None) -> PyGuardConfig:
     """
     Convenience function to load configuration.
 
@@ -283,4 +296,4 @@ def load_config(path: Path | None = None) -> PyGuardConfig:
     Returns:
         Validated configuration.
     """
-    return ConfigLoader.load(path)
+    return ConfigLoader.load(path=path)

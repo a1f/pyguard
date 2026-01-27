@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import click
 
@@ -13,7 +13,7 @@ from pyguard.constants import ColorMode, OutputFormat, __version__
 from pyguard.types import ConfigError, PyGuardConfig
 
 
-def format_config_text(config: PyGuardConfig) -> str:
+def format_config_text(*, config: PyGuardConfig) -> str:
     """Format configuration as human-readable text."""
     lines: list[str] = [
         "PyGuard Configuration",
@@ -49,7 +49,7 @@ def format_config_text(config: PyGuardConfig) -> str:
     return "\n".join(lines)
 
 
-def format_config_json(config: PyGuardConfig) -> str:
+def format_config_json(*, config: PyGuardConfig) -> str:
     """Format configuration as JSON."""
     data: dict[str, Any] = {
         "config_path": str(config.config_path) if config.config_path else None,
@@ -89,7 +89,7 @@ def format_config_json(config: PyGuardConfig) -> str:
 class ConfigType(click.ParamType):
     """Custom Click parameter type for config path."""
 
-    name = "path"
+    name: str = "path"
 
     def convert(
         self,
@@ -102,7 +102,7 @@ class ConfigType(click.ParamType):
         return Path(value)
 
 
-pass_config = click.make_pass_decorator(PyGuardConfig)
+CONFIG_TYPE: Final[ConfigType] = ConfigType()
 
 
 @click.group()
@@ -110,17 +110,17 @@ pass_config = click.make_pass_decorator(PyGuardConfig)
 @click.option(
     "--config",
     "config_path",
-    type=ConfigType(),
+    type=CONFIG_TYPE,
     default=None,
     help="Path to pyproject.toml (default: search upward from current directory)",
 )
 @click.pass_context
-def cli(ctx: click.Context, config_path: Path | None) -> None:
+def cli(ctx: click.Context, *, config_path: Path | None) -> None:
     """PyGuard - A strict Python linter for typing, APIs, and structured returns."""
     ctx.ensure_object(dict)
     try:
-        config: PyGuardConfig = load_config(config_path)
-        ctx.obj["config"] = config
+        cfg: PyGuardConfig = load_config(path=config_path)
+        ctx.obj["config"] = cfg
     except ConfigError as e:
         click.echo(f"Error: {e}", err=True)
         if e.path:
@@ -132,7 +132,7 @@ def cli(ctx: click.Context, config_path: Path | None) -> None:
 @click.option("--validate", is_flag=True, help="Only validate configuration, don't print")
 @click.option("--json", "as_json", is_flag=True, help="Output configuration as JSON")
 @click.pass_context
-def config(ctx: click.Context, validate: bool, as_json: bool) -> None:
+def config(ctx: click.Context, *, validate: bool, as_json: bool) -> None:
     """Show or validate configuration."""
     cfg: PyGuardConfig = ctx.obj["config"]
 
@@ -141,9 +141,9 @@ def config(ctx: click.Context, validate: bool, as_json: bool) -> None:
         return
 
     if as_json:
-        click.echo(format_config_json(cfg))
+        click.echo(format_config_json(config=cfg))
     else:
-        click.echo(format_config_text(cfg))
+        click.echo(format_config_text(config=cfg))
 
 
 @cli.command()
@@ -166,6 +166,7 @@ def config(ctx: click.Context, validate: bool, as_json: bool) -> None:
 def lint(
     ctx: click.Context,
     paths: tuple[Path, ...],
+    *,
     output_format: str | None,
     color: str | None,
     show_source: bool | None,
@@ -193,7 +194,7 @@ def lint(
     click.echo(f"Would lint paths: {[str(p) for p in paths]}")
     click.echo(f"Using config from: {cfg.config_path or '(defaults)'}")
     click.echo()
-    click.echo(format_config_text(cfg))
+    click.echo(format_config_text(config=cfg))
 
 
 def main() -> None:
