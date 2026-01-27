@@ -1,22 +1,58 @@
-[project]
-name = "pyguard"
-version = "0.1.0"
-description = "A strict Python style linter and formatter"
-readme = "DESIGN.md"
-requires-python = ">=3.11"
-license = {text = "MIT"}
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["*_tests.py", "test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[project]
+name = "pyguard"
+version = "0.1.0"
+description = "A strict Python linter enforcing typing, keyword-only APIs, and structured returns"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Alex Fetisov" }
+]
+keywords = ["linter", "typing", "python", "static-analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
+dependencies = [
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+pyguard = "pyguard.cli:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
