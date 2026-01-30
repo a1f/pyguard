@@ -11,7 +11,7 @@ from pyguard.types import PyGuardConfig
 
 @pytest.fixture
 def sample_project(tmp_path: Path) -> Path:
-    """Create a sample project structure for testing."""
+    """Create a sample project structure."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "pkg").mkdir()
     (tmp_path / "tests").mkdir()
@@ -33,112 +33,111 @@ def sample_project(tmp_path: Path) -> Path:
     return tmp_path
 
 
-class TestScanFiles:
-    """Tests for scan_files function."""
+def test_scan_single_python_file(tmp_path: Path) -> None:
+    py_file = tmp_path / "test.py"
+    py_file.write_text("# test")
 
-    def test_scan_single_file(self, tmp_path: Path) -> None:
-        py_file: Path = tmp_path / "test.py"
-        py_file.write_text("# test")
+    result = scan_files(paths=(py_file,), config=PyGuardConfig())
 
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(py_file,), config=config)
+    assert result == [py_file.resolve()]
 
-        assert len(result) == 1
-        assert result[0] == py_file.resolve()
 
-    def test_scan_non_python_file(self, tmp_path: Path) -> None:
-        txt_file: Path = tmp_path / "test.txt"
-        txt_file.write_text("not python")
+def test_scan_ignores_non_python_files(tmp_path: Path) -> None:
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("not python")
 
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(txt_file,), config=config)
+    result = scan_files(paths=(txt_file,), config=PyGuardConfig())
 
-        assert len(result) == 0
+    assert result == []
 
-    def test_scan_directory(self, sample_project: Path) -> None:
-        config: PyGuardConfig = PyGuardConfig(
-            include=("**/*.py",),
-            exclude=("**/__pycache__/**", "**/.*/**"),
-        )
-        result: list[Path] = scan_files(paths=(sample_project,), config=config)
 
-        file_names: set[str] = {p.name for p in result}
-        assert "main.py" in file_names
-        assert "app.py" in file_names
-        assert "module.py" in file_names
-        assert "__init__.py" in file_names
-        assert "test_app.py" in file_names
+def test_scan_directory_finds_all_python_files(sample_project: Path) -> None:
+    config = PyGuardConfig(
+        include=("**/*.py",),
+        exclude=("**/__pycache__/**", "**/.*/**"),
+    )
 
-    def test_exclude_pycache(self, sample_project: Path) -> None:
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(sample_project,), config=config)
+    result = scan_files(paths=(sample_project,), config=config)
 
-        for path in result:
-            assert "__pycache__" not in str(path)
+    file_names = {p.name for p in result}
+    assert file_names == {"main.py", "app.py", "module.py", "__init__.py", "test_app.py"}
 
-    def test_exclude_dotfiles(self, sample_project: Path) -> None:
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(sample_project,), config=config)
 
-        for path in result:
-            assert ".hidden" not in str(path)
+def test_exclude_pycache(sample_project: Path) -> None:
+    config = PyGuardConfig(include=("**/*.py",), exclude=("**/__pycache__/**",))
 
-    def test_include_pattern(self, sample_project: Path) -> None:
-        config: PyGuardConfig = PyGuardConfig(
-            include=("src/**/*.py",),
-            exclude=(),
-        )
-        result: list[Path] = scan_files(paths=(sample_project,), config=config)
+    result = scan_files(paths=(sample_project,), config=config)
 
-        file_names: set[str] = {p.name for p in result}
-        assert "app.py" in file_names
-        assert "module.py" in file_names
-        assert "main.py" not in file_names
-        assert "test_app.py" not in file_names
+    for path in result:
+        assert "__pycache__" not in path.parts
 
-    def test_exclude_pattern(self, sample_project: Path) -> None:
-        config: PyGuardConfig = PyGuardConfig(
-            include=("**/*.py",),
-            exclude=("**/test_*.py",),
-        )
-        result: list[Path] = scan_files(paths=(sample_project,), config=config)
 
-        file_names: set[str] = {p.name for p in result}
-        assert "test_app.py" not in file_names
-        assert "app.py" in file_names
+def test_exclude_dotfiles(sample_project: Path) -> None:
+    config = PyGuardConfig(include=("**/*.py",), exclude=("**/.*/**",))
 
-    def test_multiple_paths(self, tmp_path: Path) -> None:
-        dir1: Path = tmp_path / "dir1"
-        dir2: Path = tmp_path / "dir2"
-        dir1.mkdir()
-        dir2.mkdir()
-        (dir1 / "a.py").write_text("# a")
-        (dir2 / "b.py").write_text("# b")
+    result = scan_files(paths=(sample_project,), config=config)
 
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(dir1, dir2), config=config)
+    for path in result:
+        assert not any(part.startswith(".") for part in path.parts)
 
-        assert len(result) == 2
-        file_names: set[str] = {p.name for p in result}
-        assert "a.py" in file_names
-        assert "b.py" in file_names
 
-    def test_results_sorted(self, tmp_path: Path) -> None:
-        (tmp_path / "z.py").write_text("")
-        (tmp_path / "a.py").write_text("")
-        (tmp_path / "m.py").write_text("")
+def test_exclude_test_files(sample_project: Path) -> None:
+    config = PyGuardConfig(include=("**/*.py",), exclude=("**/test_*.py",))
 
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(tmp_path,), config=config)
+    result = scan_files(paths=(sample_project,), config=config)
 
-        names: list[str] = [p.name for p in result]
-        assert names == sorted(names)
+    assert not any(p.name.startswith("test_") for p in result)
 
-    def test_empty_directory(self, tmp_path: Path) -> None:
-        empty_dir: Path = tmp_path / "empty"
-        empty_dir.mkdir()
 
-        config: PyGuardConfig = PyGuardConfig()
-        result: list[Path] = scan_files(paths=(empty_dir,), config=config)
+def test_include_pattern_limits_files(sample_project: Path) -> None:
+    config = PyGuardConfig(include=("src/**/*.py",), exclude=())
 
-        assert result == []
+    result = scan_files(paths=(sample_project,), config=config)
+
+    file_names = {p.name for p in result}
+    assert "app.py" in file_names
+    assert "module.py" in file_names
+    assert "main.py" not in file_names
+    assert "test_app.py" not in file_names
+
+
+def test_multiple_paths(tmp_path: Path) -> None:
+    dir1 = tmp_path / "dir1"
+    dir2 = tmp_path / "dir2"
+    dir1.mkdir()
+    dir2.mkdir()
+    (dir1 / "a.py").write_text("# a")
+    (dir2 / "b.py").write_text("# b")
+
+    result = scan_files(paths=(dir1, dir2), config=PyGuardConfig())
+
+    assert len(result) == 2
+    assert {p.name for p in result} == {"a.py", "b.py"}
+
+
+def test_results_are_sorted(tmp_path: Path) -> None:
+    for name in ["z.py", "a.py", "m.py"]:
+        (tmp_path / name).write_text("")
+
+    result = scan_files(paths=(tmp_path,), config=PyGuardConfig())
+
+    names = [p.name for p in result]
+    assert names == sorted(names)
+
+
+def test_empty_directory_returns_empty_list(tmp_path: Path) -> None:
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+
+    result = scan_files(paths=(empty_dir,), config=PyGuardConfig())
+
+    assert result == []
+
+
+def test_default_excludes_work(sample_project: Path) -> None:
+    result = scan_files(paths=(sample_project,), config=PyGuardConfig())
+
+    for path in result:
+        path_str = str(path)
+        assert "__pycache__" not in path_str
+        assert ".hidden" not in path_str
