@@ -46,7 +46,7 @@ class IgnoreGovernance:
     """Configuration for ignore/skip governance."""
 
     require_reason: bool = True
-    disallow: frozenset[str] = field(default_factory=frozenset)
+    disallow: frozenset[str] = field(default_factory=lambda: frozenset())
     max_per_file: int | None = None
 
 
