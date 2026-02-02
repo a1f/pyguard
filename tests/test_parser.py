@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
+from pyguard.parser import SyntaxErrorInfo, parse_file
 
 
 def test_parse_valid_file(tmp_path: Path) -> None:
