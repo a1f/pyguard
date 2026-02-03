@@ -151,7 +151,7 @@ def config(ctx: click.Context, *, validate: bool, as_json: bool) -> None:
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["text", "json", "github"]),
+    type=click.Choice(["text", "json"]),
     default=None,
     help="Output format (overrides config)",
 )
@@ -186,15 +186,16 @@ def lint(
     if overrides:
         cfg = replace(cfg, **overrides)
 
-    # Default to current directory if no paths specified
     if not paths:
         paths = (Path("."),)
 
-    # Placeholder: show that we loaded config
-    click.echo(f"Would lint paths: {[str(p) for p in paths]}")
-    click.echo(f"Using config from: {cfg.config_path or '(defaults)'}")
-    click.echo()
-    click.echo(format_config_text(config=cfg))
+    from pyguard.runner import format_results, lint_paths
+
+    result = lint_paths(paths=paths, config=cfg)
+    output: str = format_results(result=result, config=cfg)
+    if output:
+        click.echo(output)
+    ctx.exit(result.exit_code)
 
 
 def main() -> None:

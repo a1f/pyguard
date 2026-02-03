@@ -69,30 +69,51 @@ class TestConfigCommand:
 class TestLintCommand:
     """Test the lint command."""
 
-    def test_lint_shows_config_loaded(self, tmp_path: Path) -> None:
-        """lint command should show it loaded config."""
+    def test_lint_clean_directory(self, tmp_path: Path) -> None:
+        (tmp_path / "good.py").write_text("x: int = 1\n")
         runner: CliRunner = CliRunner()
         result = runner.invoke(cli, ["lint", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "Would lint paths:" in result.output
-        assert "Using config from:" in result.output
+        assert "No issues found." in result.output
+        assert "Checked 1 file." in result.output
 
-    def test_lint_with_format_override(self, tmp_path: Path) -> None:
-        """lint --format should override config."""
+    def test_lint_syntax_error(self, tmp_path: Path) -> None:
+        (tmp_path / "bad.py").write_text("def broken(\n")
+        runner: CliRunner = CliRunner()
+        result = runner.invoke(cli, ["lint", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "SYN001" in result.output
+        assert "1 error" in result.output
+
+    def test_lint_empty_directory(self, tmp_path: Path) -> None:
+        runner: CliRunner = CliRunner()
+        result = runner.invoke(cli, ["lint", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "No issues found." in result.output
+        assert "Checked 0 files." in result.output
+
+    def test_lint_json_format(self, tmp_path: Path) -> None:
+        (tmp_path / "bad.py").write_text("def broken(\n")
         runner: CliRunner = CliRunner()
         result = runner.invoke(cli, ["lint", "--format", "json", str(tmp_path)])
 
-        assert result.exit_code == 0
-        assert "Format: json" in result.output
+        assert result.exit_code == 1
+        assert '"code": "SYN001"' in result.output
 
-    def test_lint_with_color_override(self, tmp_path: Path) -> None:
-        """lint --color should override config."""
+    def test_lint_no_show_source(self, tmp_path: Path) -> None:
+        (tmp_path / "bad.py").write_text("def broken(\n")
         runner: CliRunner = CliRunner()
-        result = runner.invoke(cli, ["lint", "--color", "never", str(tmp_path)])
+        result = runner.invoke(
+            cli, ["lint", "--no-show-source", str(tmp_path)],
+        )
 
-        assert result.exit_code == 0
-        assert "Color: never" in result.output
+        assert result.exit_code == 1
+        assert "SYN001" in result.output
+        # Source line should not appear with caret
+        assert "    ^" not in result.output
 
 
 class TestErrorHandling:
