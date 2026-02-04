@@ -6,8 +6,8 @@ from pathlib import Path
 
 from pyguard.constants import Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
-from pyguard.formatters import format_summary, get_formatter
-from pyguard.parser import ParseResult, parse_file
+from pyguard.formatters import Formatter, format_summary, get_formatter
+from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
 from pyguard.scanner import scan_files
 from pyguard.types import PyGuardConfig
 
@@ -22,7 +22,7 @@ class LintResult:
 
 
 def _syntax_error_to_diagnostic(*, parse_result: ParseResult) -> Diagnostic:
-    err = parse_result.syntax_error
+    err: SyntaxErrorInfo | None = parse_result.syntax_error
     assert err is not None
     return Diagnostic(
         file=parse_result.file,
@@ -39,7 +39,7 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
     collection: DiagnosticCollection = DiagnosticCollection()
 
     for file in files:
-        result = parse_file(file=file)
+        result: ParseResult = parse_file(file=file)
         if result.syntax_error is not None:
             collection.add(
                 diagnostic=_syntax_error_to_diagnostic(parse_result=result),
@@ -54,7 +54,7 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
 
 
 def format_results(*, result: LintResult, config: PyGuardConfig) -> str:
-    formatter = get_formatter(output_format=config.output_format)
+    formatter: Formatter = get_formatter(output_format=config.output_format)
     output: str = formatter.format(diagnostics=result.diagnostics, config=config)
 
     summary: str = format_summary(diagnostics=result.diagnostics)
