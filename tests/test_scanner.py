@@ -141,3 +141,22 @@ def test_default_excludes_work(sample_project: Path) -> None:
         path_str = str(path)
         assert "__pycache__" not in path_str
         assert ".hidden" not in path_str
+
+
+def test_exclude_wildcard_prefix_pattern(tmp_path: Path) -> None:
+    """Patterns like *.egg-info/** should exclude matching directories."""
+    egg_dir = tmp_path / "mypackage.egg-info"
+    egg_dir.mkdir()
+    (egg_dir / "PKG-INFO.py").write_text("# egg info")
+    (tmp_path / "real.py").write_text("# real code")
+
+    config = PyGuardConfig(
+        include=("**/*.py",),
+        exclude=("*.egg-info/**",),
+    )
+
+    result = scan_files(paths=(tmp_path,), config=config)
+
+    file_names = {p.name for p in result}
+    assert "real.py" in file_names
+    assert "PKG-INFO.py" not in file_names

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 
 from pyguard.constants import (
     DEFAULT_EXCLUDES,
@@ -54,8 +55,8 @@ class IgnoreGovernance:
 class RuleConfig:
     """Configuration for all rules."""
 
-    severities: dict[str, Severity] = field(
-        default_factory=lambda: dict(DEFAULT_SEVERITIES)
+    severities: MappingProxyType[str, Severity] = field(
+        default_factory=lambda: MappingProxyType(DEFAULT_SEVERITIES)
     )
     typ001: TYP001Options = field(default_factory=TYP001Options)
     typ003: TYP003Options = field(default_factory=TYP003Options)

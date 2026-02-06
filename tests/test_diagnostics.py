@@ -146,13 +146,13 @@ class TestDiagnosticCollection:
         coll = DiagnosticCollection()
         coll.add(diagnostic=self._make_diagnostic(severity=Severity.WARN))
         coll.add(diagnostic=self._make_diagnostic(severity=Severity.ERROR))
-        assert coll.has_errors() is True
+        assert coll.has_errors is True
 
     def test_has_errors_false(self) -> None:
         """has_errors returns False when no ERROR present."""
         coll = DiagnosticCollection()
         coll.add(diagnostic=self._make_diagnostic(severity=Severity.WARN))
-        assert coll.has_errors() is False
+        assert coll.has_errors is False
 
     def test_error_count(self) -> None:
         """error_count returns correct count."""
@@ -176,7 +176,7 @@ class TestDiagnosticCollection:
         assert len(coll) == 0
         assert coll.error_count == 0
         assert coll.warning_count == 0
-        assert coll.has_errors() is False
+        assert coll.has_errors is False
         assert coll.sorted == []
 
     def test_iteration(self) -> None:

@@ -63,6 +63,8 @@ DEFAULT_SEVERITIES: Final[dict[str, Severity]] = {
     "EXP002": Severity.OFF,
 }
 
+SYNTAX_ERROR_CODE: Final[str] = "SYN001"
+
 DEFAULT_EXCLUDES: Final[tuple[str, ...]] = (
     "**/__pycache__/**",
     "**/.*",

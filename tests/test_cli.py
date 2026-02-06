@@ -116,6 +116,26 @@ class TestLintCommand:
         assert "    ^" not in result.output
 
 
+class TestConfigDisplay:
+    """Test config display edge cases."""
+
+    def test_max_per_file_zero_displays_zero(self, tmp_path: Path) -> None:
+        """max_per_file=0 should display as 0, not 'unlimited'."""
+        config_path: Path = tmp_path / "pyproject.toml"
+        config_path.write_text(
+            """
+[tool.pyguard.ignores]
+max_per_file = 0
+"""
+        )
+        runner: CliRunner = CliRunner()
+        result = runner.invoke(cli, ["--config", str(config_path), "config"])
+
+        assert result.exit_code == 0
+        assert "Max per file: 0" in result.output
+        assert "unlimited" not in result.output
+
+
 class TestErrorHandling:
     """Test CLI error handling."""
 

@@ -54,20 +54,25 @@ def _match_doublestar(*, path: str, pattern: str) -> bool:
         prefix: str
         tail: str
         prefix, tail = pattern.split("/**/", 1)
-        if not path.startswith(prefix + "/"):
-            return False
-        remainder: str = path[len(prefix) + 1:]
-        # Tail could be "*.py" - match against any part of remainder
-        remainder_parts: list[str] = remainder.split("/")
-        return any(
-            fnmatch("/".join(remainder_parts[i:]), tail)
-            for i in range(len(remainder_parts))
-        )
+        # Try each split point: fnmatch supports wildcards in prefix
+        for i in range(1, len(parts)):
+            prefix_candidate: str = "/".join(parts[:i])
+            if fnmatch(prefix_candidate, prefix):
+                remainder_parts: list[str] = parts[i:]
+                return any(
+                    fnmatch("/".join(remainder_parts[j:]), tail)
+                    for j in range(len(remainder_parts))
+                )
+        return False
 
     # Pattern like "prefix/**" - anything under prefix
     if pattern.endswith("/**"):
         prefix = pattern[:-3]  # Strip /**
-        return path.startswith(prefix + "/") or path == prefix
+        # fnmatch supports wildcards in prefix (e.g., "*.egg-info/**")
+        for i in range(1, len(parts)):
+            if fnmatch("/".join(parts[:i]), prefix):
+                return True
+        return fnmatch(path, prefix)
 
     # Fallback to fnmatch
     return fnmatch(path, pattern)

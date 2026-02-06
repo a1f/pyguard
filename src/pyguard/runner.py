@@ -4,14 +4,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from pyguard.constants import Severity
+from pyguard.constants import SYNTAX_ERROR_CODE, Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
 from pyguard.formatters import Formatter, format_summary, get_formatter
 from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
 from pyguard.scanner import scan_files
 from pyguard.types import PyGuardConfig
-
-SYNTAX_ERROR_CODE: str = "SYN001"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +21,8 @@ class LintResult:
 
 def _syntax_error_to_diagnostic(*, parse_result: ParseResult) -> Diagnostic:
     err: SyntaxErrorInfo | None = parse_result.syntax_error
-    assert err is not None
+    if err is None:
+        raise ValueError("parse_result must have a syntax_error")
     return Diagnostic(
         file=parse_result.file,
         location=SourceLocation(line=err.line, column=err.column),
@@ -45,7 +44,7 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
                 diagnostic=_syntax_error_to_diagnostic(parse_result=result),
             )
 
-    exit_code: int = 1 if collection.has_errors() else 0
+    exit_code: int = 1 if collection.has_errors else 0
     return LintResult(
         diagnostics=collection,
         files_checked=len(files),

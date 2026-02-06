@@ -10,6 +10,7 @@ import click
 
 from pyguard.config import load_config
 from pyguard.constants import ColorMode, OutputFormat, __version__
+from pyguard.runner import format_results, lint_paths
 from pyguard.types import ConfigError, PyGuardConfig
 
 
@@ -38,12 +39,15 @@ def format_config_text(*, config: PyGuardConfig) -> str:
         status: str = severity.value.upper()
         lines.append(f"  {code}: {status}")
 
+    max_display: str | int = (
+        config.ignores.max_per_file if config.ignores.max_per_file is not None else "unlimited"
+    )
     lines.extend([
         "",
         "Ignore Governance:",
         f"  Require reason: {config.ignores.require_reason}",
         f"  Disallow: {sorted(config.ignores.disallow) or '(none)'}",
-        f"  Max per file: {config.ignores.max_per_file or 'unlimited'}",
+        f"  Max per file: {max_display}",
     ])
 
     return "\n".join(lines)
@@ -188,8 +192,6 @@ def lint(
 
     if not paths:
         paths = (Path("."),)
-
-    from pyguard.runner import format_results, lint_paths
 
     result = lint_paths(paths=paths, config=cfg)
     output: str = format_results(result=result, config=cfg)

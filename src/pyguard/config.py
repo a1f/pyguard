@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 from pyguard.constants import (
@@ -172,6 +173,9 @@ class ConfigLoader:
         severities: dict[str, Severity] = dict(DEFAULT_SEVERITIES)
 
         for key, value in data.items():
+            if key.upper() not in RULE_CODES and not isinstance(value, dict):
+                errors.append(f"rules.{key} is not a recognized rule code")
+                continue
             if key.upper() in RULE_CODES:
                 rule_code: str = key.upper()
                 if isinstance(value, str):
@@ -239,7 +243,7 @@ class ConfigLoader:
             kw001 = KW001Options()
 
         return RuleConfig(
-            severities=severities,
+            severities=MappingProxyType(severities),
             typ001=typ001,
             typ003=typ003,
             kw001=kw001,

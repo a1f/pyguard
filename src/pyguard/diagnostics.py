@@ -52,6 +52,7 @@ class DiagnosticCollection:
             key=lambda d: (str(d.file), d.location.line, d.location.column),
         )
 
+    @property
     def has_errors(self) -> bool:
         """Return True if any diagnostic has ERROR severity."""
         return any(d.severity == Severity.ERROR for d in self._diagnostics)

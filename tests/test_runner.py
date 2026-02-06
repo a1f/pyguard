@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pyguard.constants import OutputFormat
-from pyguard.runner import SYNTAX_ERROR_CODE, LintResult, format_results, lint_paths
+from pyguard.constants import SYNTAX_ERROR_CODE, OutputFormat
+from pyguard.runner import LintResult, format_results, lint_paths
 from pyguard.types import PyGuardConfig
 
 
@@ -22,7 +22,7 @@ class TestLintPaths:
         )
         assert result.files_checked == 1
         assert result.exit_code == 0
-        assert not result.diagnostics.has_errors()
+        assert not result.diagnostics.has_errors
 
     def test_syntax_error_detected(self, tmp_path: Path) -> None:
         _write_file(tmp_path / "bad.py", "def broken(\n")
@@ -32,7 +32,7 @@ class TestLintPaths:
         )
         assert result.files_checked == 1
         assert result.exit_code == 1
-        assert result.diagnostics.has_errors()
+        assert result.diagnostics.has_errors
         diags = result.diagnostics.sorted
         assert len(diags) == 1
         assert diags[0].code == SYNTAX_ERROR_CODE

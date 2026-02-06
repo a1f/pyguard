@@ -204,6 +204,23 @@ disallow = [123, "TYP001"]
         assert "ignores.disallow entries must be strings" in error_msg
 
 
+    def test_unknown_rule_code_raises_config_error(self, tmp_path: Path) -> None:
+        """Unknown rule code in config should raise ConfigError."""
+        config_path: Path = tmp_path / "pyproject.toml"
+        config_path.write_text(
+            """
+[tool.pyguard.rules]
+TYPO01 = "error"
+"""
+        )
+
+        with pytest.raises(ConfigError) as exc_info:
+            load_config(path=config_path)
+
+        assert "TYPO01" in str(exc_info.value)
+        assert "not a recognized rule code" in str(exc_info.value)
+
+
 class TestConfigDiscovery:
     """Test configuration file discovery."""
 

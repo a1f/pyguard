@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from pyguard.constants import OutputFormat, Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
 from pyguard.formatters import (
@@ -157,9 +159,9 @@ class TestGetFormatter:
         formatter = get_formatter(output_format=OutputFormat.JSON)
         assert isinstance(formatter, JsonFormatter)
 
-    def test_github_falls_back_to_text(self) -> None:
-        formatter = get_formatter(output_format=OutputFormat.GITHUB)
-        assert isinstance(formatter, TextFormatter)
+    def test_github_raises_not_implemented(self) -> None:
+        with pytest.raises(NotImplementedError, match="GitHub annotation format"):
+            get_formatter(output_format=OutputFormat.GITHUB)
 
 
 class TestFormatSummary:

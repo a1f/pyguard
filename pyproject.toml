@@ -54,5 +54,5 @@ warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py"
+python_files = ["test_*.py", "*_tests.py"]
 addopts = "-v --tb=short"
