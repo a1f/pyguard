@@ -22,6 +22,7 @@ Rules covered:
 - EXP001: Structured return types must be module-level
 - EXP002: Enforce __all__ or explicit re-export policy
 """
+from __future__ import annotations
 
 from typing import NamedTuple
 

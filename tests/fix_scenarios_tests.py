@@ -16,13 +16,13 @@ Fix categories:
 - TYP002: Add -> None for trivial functions (safe autofix)
 - IMP001: Move imports to top level (safe in simple cases)
 """
+from __future__ import annotations
 
 import difflib
 import textwrap
 from typing import Any
 
 import pytest
-
 
 # =============================================================================
 # TYP010: Modern Typing Syntax Fixes

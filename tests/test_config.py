@@ -83,7 +83,7 @@ class TestConfigImmutability:
         config: PyGuardConfig = PyGuardConfig()
 
         with pytest.raises(AttributeError):
-            config.rules.typ001 = None  # type: ignore[misc]
+            config.rules.typ001 = None  # type: ignore[misc, assignment]
 
 
 class TestConfigLoading:
