@@ -139,3 +139,63 @@ max_per_file = null
 2. **Dataclasses for config** - Minimal dependencies, immutable by default
 3. **pyproject.toml only** - Consistent with modern Python tooling (ruff, black, mypy)
 4. **Strict defaults** - Encourage best practices for typing rules
+
+---
+
+## Development Workflow
+
+### Planning Structure
+
+All work must follow a structured plan with three levels:
+- **Chapters** - Major feature areas or milestones
+- **Phases** - Groups of related steps within a chapter
+- **Steps** - Minimal implementation units (the atomic work item)
+
+See `DESIGN.md` Section 8 for the current implementation plan.
+
+### Commit Rules
+
+1. **One step = one commit** - Each step is a minimal unit of implementation
+2. **Size limit** - Commits should be 100-200 lines of code (excluding tests)
+3. **Maximum** - Never exceed 300 lines per commit (excluding tests)
+4. **No AI attribution** - Never include "Co-Authored-By: Claude" or similar in commit messages
+5. **Descriptive messages** - Commit messages should describe what changed and why
+
+### Implementation Workflow
+
+When implementing a step, follow this sequence:
+
+1. **Plan** - Use `coder` agent with `/python-coding-rules` skill
+2. **Implement** - Write code following the plan
+3. **Plan Tests** - Use `test-suite-architect` agent to design test scenarios
+4. **Implement Tests** - Use `coder` agent to write the planned tests
+5. **Review** - Use `code-reviewer` agent to review the code
+6. **Security Review** - Use `security-auditor` agent to check for vulnerabilities
+7. **Fix Issues** - If reviewers find improvements, send back to `coder` agent
+8. **Repeat** - Continue until no improvements needed
+9. **Commit** - Create commit with descriptive message
+
+### Testing Requirements
+
+- **Use mocks and fakes** - All tests must use mock/fake data, never real external resources
+- **Isolation** - Tests should be independent and not rely on external state
+- **Fixtures** - Use pytest fixtures for common test setup
+- **Coverage** - Aim for high coverage of edge cases and error paths
+
+### Agent Usage
+
+| Agent | Purpose |
+|-------|---------|
+| `coder` | Implement code changes (use with `/python-coding-rules` skill) |
+| `test-suite-architect` | Plan test scenarios before implementation |
+| `code-reviewer` | Review structure, style, naming, typos |
+| `security-auditor` | Find security vulnerabilities |
+| `bug-hunter` | Find logic errors, edge cases, bugs |
+
+### Single Step Execution
+
+**Important**: Implement ONE step at a time unless explicitly asked otherwise. This ensures:
+- Small, reviewable changes
+- Easy rollback if issues arise
+- Clear progress tracking
+- Manageable commit sizes
