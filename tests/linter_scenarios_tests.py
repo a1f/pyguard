@@ -32,6 +32,7 @@ import pytest
 from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
 from pyguard.rules.typ001 import TYP001Rule
+from pyguard.rules.typ002 import TYP002Rule
 from pyguard.types import PyGuardConfig
 
 
@@ -58,6 +59,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
     config: PyGuardConfig = PyGuardConfig()
     rules: dict[str, object] = {
         "TYP001": TYP001Rule(),
+        "TYP002": TYP002Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -237,7 +239,6 @@ def multiply(x: int, y: int) -> int:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP002 rule not yet implemented")
 class TestTYP002MissingReturnAnnotation:
     """
     TYP002: Missing function return annotation.
@@ -269,8 +270,8 @@ def get_value():
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_lambda_not_flagged(self) -> None:
         """
@@ -284,8 +285,8 @@ double = lambda x: x * 2
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_async_function_missing_return(self) -> None:
         """
@@ -305,8 +306,8 @@ async def fetch_data():
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_nested_function_missing_return(self) -> None:
         """
@@ -328,8 +329,8 @@ def outer() -> int:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_dunder_init_exempted(self) -> None:
         """
@@ -346,8 +347,8 @@ class MyClass:
         # By default, __init__ should be exempted
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_properly_annotated_no_errors(self) -> None:
         """
@@ -361,8 +362,8 @@ def calculate(x: int, y: int) -> int:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
