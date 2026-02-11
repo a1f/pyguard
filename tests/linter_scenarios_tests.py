@@ -23,9 +23,16 @@ Rules covered:
 - EXP002: Enforce __all__ or explicit re-export policy
 """
 
+import ast
+from pathlib import Path
 from typing import NamedTuple
 
 import pytest
+
+from pyguard.diagnostics import Diagnostic
+from pyguard.parser import ParseResult
+from pyguard.rules.typ001 import TYP001Rule
+from pyguard.types import PyGuardConfig
 
 
 class ExpectedDiagnostic(NamedTuple):
@@ -36,12 +43,45 @@ class ExpectedDiagnostic(NamedTuple):
     message: str
 
 
+def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
+    """Parse code and run the specified rule, returning diagnostics."""
+    file: Path = Path("scenario.py")
+    source_lines: tuple[str, ...] = tuple(code.splitlines())
+    tree: ast.Module = ast.parse(code, filename=str(file))
+    parse_result: ParseResult = ParseResult(
+        file=file,
+        tree=tree,
+        source=code,
+        source_lines=source_lines,
+        syntax_error=None,
+    )
+    config: PyGuardConfig = PyGuardConfig()
+    rules: dict[str, object] = {
+        "TYP001": TYP001Rule(),
+    }
+    rule: object = rules[rule_code]
+    return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
+
+
+def _assert_diagnostics_match(
+    actual: list[Diagnostic],
+    expected: list[ExpectedDiagnostic],
+) -> None:
+    """Assert that actual diagnostics match expected (line, code, message)."""
+    actual_tuples: list[tuple[int, str, str]] = [
+        (d.location.line, d.code, d.message) for d in actual
+    ]
+    expected_tuples: list[tuple[int, str, str]] = [
+        (e.line, e.code, e.message) for e in expected
+    ]
+    assert actual_tuples == expected_tuples
+
+
 # =============================================================================
 # TYP001: Missing function parameter annotations
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP001 rule not yet implemented")
 class TestTYP001MissingParameterAnnotations:
     """
     TYP001: Missing function parameter annotations.
@@ -80,12 +120,8 @@ def add(x, y):
             ),
         ]
 
-        # TODO: Replace with actual linter call
-        # from pyguard.runner import lint_code
-        # diagnostics = lint_code(code_sample)
-        # assert_diagnostics_match(diagnostics, expected_diagnostics)
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_partial_parameter_annotations(self) -> None:
         """
@@ -105,8 +141,8 @@ def process(x: int, y: str, z):
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_self_parameter_exempted(self) -> None:
         """
@@ -122,19 +158,19 @@ class Calculator:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = [
             ExpectedDiagnostic(
-                line=3,
+                line=2,
                 code="TYP001",
                 message="Missing type annotation for parameter 'x'",
             ),
             ExpectedDiagnostic(
-                line=3,
+                line=2,
                 code="TYP001",
                 message="Missing type annotation for parameter 'y'",
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_cls_parameter_exempted(self) -> None:
         """
@@ -156,8 +192,8 @@ class Factory:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_default_values_still_need_annotations(self) -> None:
         """
@@ -177,8 +213,8 @@ def greet(name="World"):
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_fully_annotated_no_errors(self) -> None:
         """
@@ -192,8 +228,8 @@ def multiply(x: int, y: int) -> int:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================

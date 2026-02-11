@@ -56,10 +56,21 @@ class TestRuleProtocol:
 
 
 class TestRegistry:
-    def test_get_enabled_rules_empty_by_default(self) -> None:
+    def test_get_enabled_rules_returns_registered_rules(self) -> None:
         rules: list[Rule] = get_enabled_rules(config=PyGuardConfig())
         assert isinstance(rules, list)
-        assert rules == []
+        assert len(rules) >= 1
+        codes: list[str] = [r.code for r in rules]
+        assert "TYP001" in codes
+
+    def test_get_enabled_rules_excludes_off_rules(self) -> None:
+        severities: dict[str, Severity] = {"TYP001": Severity.OFF}
+        config: PyGuardConfig = PyGuardConfig(
+            rules=RuleConfig(severities=MappingProxyType(severities)),
+        )
+        rules: list[Rule] = get_enabled_rules(config=config)
+        codes: list[str] = [r.code for r in rules]
+        assert "TYP001" not in codes
 
 
 class TestRunnerRuleIntegration:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pyguard.rules.base import Rule
+from pyguard.rules.typ001 import TYP001Rule
 from pyguard.types import PyGuardConfig
 
 
@@ -13,5 +14,7 @@ def get_enabled_rules(*, config: PyGuardConfig) -> list[Rule]:
 
 def _all_rules() -> list[Rule]:
     """Return all registered rule instances."""
-    rules: list[Rule] = []
+    rules: list[Rule] = [
+        TYP001Rule(),
+    ]
     return rules
