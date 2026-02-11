@@ -23,6 +23,8 @@ from typing import Any
 
 import pytest
 
+from pyguard.fixers.typ002 import fix_missing_return_none
+
 
 # =============================================================================
 # TYP010: Modern Typing Syntax Fixes
@@ -412,7 +414,6 @@ class TestTYP010ModernTypingSyntaxFix:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP002 fix not yet implemented")
 class TestTYP002AddNoneReturnFix:
     """
     TYP002: Add -> None for trivial functions autofix.
@@ -442,8 +443,8 @@ class TestTYP002AddNoneReturnFix:
                 print(message)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_fix_add_none_return_with_bare_return(self) -> None:
         """
@@ -465,8 +466,8 @@ class TestTYP002AddNoneReturnFix:
                 print("continuing")
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_no_fix_when_returns_value(self) -> None:
         """
@@ -486,8 +487,8 @@ class TestTYP002AddNoneReturnFix:
                 return 42
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_no_fix_when_generator(self) -> None:
         """
@@ -508,8 +509,8 @@ class TestTYP002AddNoneReturnFix:
                     yield i
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_no_fix_when_already_annotated(self) -> None:
         """
@@ -527,8 +528,8 @@ class TestTYP002AddNoneReturnFix:
                 print(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_fix_method_no_return(self) -> None:
         """
@@ -548,8 +549,8 @@ class TestTYP002AddNoneReturnFix:
                     print(message)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_fix_async_function_no_return(self) -> None:
         """
@@ -567,8 +568,8 @@ class TestTYP002AddNoneReturnFix:
                 await notify(user_id, message)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_fix_preserves_decorators(self) -> None:
         """
@@ -590,8 +591,8 @@ class TestTYP002AddNoneReturnFix:
                 print(x)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
     def test_fix_preserves_multiline_signature(self) -> None:
         """
@@ -618,8 +619,8 @@ class TestTYP002AddNoneReturnFix:
                 print(param1, param2, param3)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP002 fix pending"
+        actual_output: str = fix_missing_return_none(input_code)
+        assert actual_output == expected_output
 
 
 # =============================================================================
