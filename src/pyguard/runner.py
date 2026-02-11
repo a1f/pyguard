@@ -8,6 +8,8 @@ from pyguard.constants import SYNTAX_ERROR_CODE, Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
 from pyguard.formatters import Formatter, format_summary, get_formatter
 from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
+from pyguard.rules.base import Rule
+from pyguard.rules.registry import get_enabled_rules
 from pyguard.scanner import scan_files
 from pyguard.types import PyGuardConfig
 
@@ -36,6 +38,7 @@ def _syntax_error_to_diagnostic(*, parse_result: ParseResult) -> Diagnostic:
 def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
     files: list[Path] = scan_files(paths=paths, config=config)
     collection: DiagnosticCollection = DiagnosticCollection()
+    rules: list[Rule] = get_enabled_rules(config=config)
 
     for file in files:
         result: ParseResult = parse_file(file=file)
@@ -43,6 +46,14 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
             collection.add(
                 diagnostic=_syntax_error_to_diagnostic(parse_result=result),
             )
+            continue
+
+        for rule in rules:
+            diagnostics: list[Diagnostic] = rule.check(
+                parse_result=result,
+                config=config,
+            )
+            collection.add_all(diagnostics=diagnostics)
 
     exit_code: int = 1 if collection.has_errors else 0
     return LintResult(
