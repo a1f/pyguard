@@ -24,6 +24,7 @@ from typing import Any
 import pytest
 
 from pyguard.fixers.typ002 import fix_missing_return_none
+from pyguard.fixers.typ003 import fix_missing_variable_annotations
 
 
 # =============================================================================
@@ -621,6 +622,371 @@ class TestTYP002AddNoneReturnFix:
 
         actual_output: str = fix_missing_return_none(input_code)
         assert actual_output == expected_output
+
+
+# =============================================================================
+# TYP003: Add Variable Type Annotations Fix
+# =============================================================================
+
+
+class TestTYP003AddVariableAnnotationFix:
+    """
+    TYP003: Add type annotations for variables with inferable types.
+
+    This is a conservative safe fix that adds type annotations to
+    simple assignments when the type is unambiguously inferable from
+    the assigned value (literals or builtin constructor calls).
+    """
+
+    # --- Literal inference ---
+
+    def test_fix_int_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = 5
+        ''')
+        expected: str = textwrap.dedent('''\
+            x: int = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_str_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            name = "hello"
+        ''')
+        expected: str = textwrap.dedent('''\
+            name: str = "hello"
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_float_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            pi = 3.14
+        ''')
+        expected: str = textwrap.dedent('''\
+            pi: float = 3.14
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_bool_literal_true(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            flag = True
+        ''')
+        expected: str = textwrap.dedent('''\
+            flag: bool = True
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_bool_literal_false(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            active = False
+        ''')
+        expected: str = textwrap.dedent('''\
+            active: bool = False
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_bytes_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            data = b"raw"
+        ''')
+        expected: str = textwrap.dedent('''\
+            data: bytes = b"raw"
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_complex_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            z = 4j
+        ''')
+        expected: str = textwrap.dedent('''\
+            z: complex = 4j
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Bool before int ordering ---
+
+    def test_bool_not_int(self) -> None:
+        """True/False must be inferred as bool, not int (bool subclasses int)."""
+        input_code: str = textwrap.dedent('''\
+            a = True
+            b = False
+        ''')
+        expected: str = textwrap.dedent('''\
+            a: bool = True
+            b: bool = False
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Builtin constructor calls ---
+
+    def test_fix_dict_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            d = dict()
+        ''')
+        expected: str = textwrap.dedent('''\
+            d: dict = dict()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_list_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            items = list()
+        ''')
+        expected: str = textwrap.dedent('''\
+            items: list = list()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_set_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            s = set()
+        ''')
+        expected: str = textwrap.dedent('''\
+            s: set = set()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_int_constructor_with_arg(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = int("5")
+        ''')
+        expected: str = textwrap.dedent('''\
+            x: int = int("5")
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_frozenset_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            fs = frozenset()
+        ''')
+        expected: str = textwrap.dedent('''\
+            fs: frozenset = frozenset()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_tuple_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            t = tuple()
+        ''')
+        expected: str = textwrap.dedent('''\
+            t: tuple = tuple()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_bytearray_constructor(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            ba = bytearray()
+        ''')
+        expected: str = textwrap.dedent('''\
+            ba: bytearray = bytearray()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Multiple fixable assignments ---
+
+    def test_fix_multiple_assignments(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = 5
+            name = "hello"
+            pi = 3.14
+        ''')
+        expected: str = textwrap.dedent('''\
+            x: int = 5
+            name: str = "hello"
+            pi: float = 3.14
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Mixed fixable and unfixable ---
+
+    def test_fix_mixed_fixable_and_unfixable(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = 5
+            result = foo()
+            name = "hello"
+            items = [1, 2, 3]
+        ''')
+        expected: str = textwrap.dedent('''\
+            x: int = 5
+            result = foo()
+            name: str = "hello"
+            items = [1, 2, 3]
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Skip cases ---
+
+    def test_skip_none_literal(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = None
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_ellipsis(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = ...
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_multi_target(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = y = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_tuple_unpack(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            a, b = 1, 2
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_attribute_target(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            self.x = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_subscript_target(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            items[0] = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_underscore(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            _ = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_unknown_call(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            result = foo()
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_list_display(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            items = [1, 2, 3]
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_dict_display(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            d = {"a": 1}
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_binop(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = 1 + 2
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_skip_unaryop(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = -1
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    # --- Scope handling ---
+
+    def test_fix_module_level(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            MAX_RETRIES = 3
+        ''')
+        expected: str = textwrap.dedent('''\
+            MAX_RETRIES: int = 3
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_class_level(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            class Config:
+                timeout = 30
+                name = "default"
+        ''')
+        expected: str = textwrap.dedent('''\
+            class Config:
+                timeout: int = 30
+                name: str = "default"
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_fix_function_level(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            def process() -> None:
+                count = 0
+                label = "start"
+        ''')
+        expected: str = textwrap.dedent('''\
+            def process() -> None:
+                count: int = 0
+                label: str = "start"
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Preserves existing code ---
+
+    def test_preserves_indentation(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            if True:
+                x = 5
+        ''')
+        expected: str = textwrap.dedent('''\
+            if True:
+                x: int = 5
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_preserves_comments(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            # This is a count
+            count = 0  # start at zero
+        ''')
+        expected: str = textwrap.dedent('''\
+            # This is a count
+            count: int = 0  # start at zero
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    def test_preserves_existing_annotations(self) -> None:
+        """Already-annotated variables should not be double-annotated."""
+        input_code: str = textwrap.dedent('''\
+            x: int = 5
+            y = "hello"
+        ''')
+        expected: str = textwrap.dedent('''\
+            x: int = 5
+            y: str = "hello"
+        ''')
+        assert fix_missing_variable_annotations(input_code) == expected
+
+    # --- Idempotency ---
+
+    def test_idempotent(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            x = 5
+            name = "hello"
+        ''')
+        first_pass: str = fix_missing_variable_annotations(input_code)
+        second_pass: str = fix_missing_variable_annotations(first_pass)
+        assert first_pass == second_pass
+
+    # --- Graceful handling ---
+
+    def test_syntax_error_returns_source(self) -> None:
+        input_code: str = "def f(\n"
+        assert fix_missing_variable_annotations(input_code) == input_code
+
+    def test_empty_source(self) -> None:
+        assert fix_missing_variable_annotations("") == ""
+
+    def test_no_assignments(self) -> None:
+        input_code: str = textwrap.dedent('''\
+            def greet() -> None:
+                print("hello")
+        ''')
+        assert fix_missing_variable_annotations(input_code) == input_code
 
 
 # =============================================================================

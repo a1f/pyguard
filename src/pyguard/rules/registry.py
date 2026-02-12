@@ -4,6 +4,7 @@ from __future__ import annotations
 from pyguard.rules.base import Rule
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
+from pyguard.rules.typ003 import TYP003Rule
 from pyguard.types import PyGuardConfig
 
 
@@ -18,5 +19,6 @@ def _all_rules() -> list[Rule]:
     rules: list[Rule] = [
         TYP001Rule(),
         TYP002Rule(),
+        TYP003Rule(),
     ]
     return rules

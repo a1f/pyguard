@@ -33,7 +33,9 @@ from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
-from pyguard.types import PyGuardConfig
+from pyguard.rules.typ003 import TYP003Rule
+from pyguard.constants import AnnotationScope
+from pyguard.types import PyGuardConfig, RuleConfig, TYP003Options
 
 
 class ExpectedDiagnostic(NamedTuple):
@@ -60,6 +62,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
     rules: dict[str, object] = {
         "TYP001": TYP001Rule(),
         "TYP002": TYP002Rule(),
+        "TYP003": TYP003Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -371,7 +374,6 @@ def calculate(x: int, y: int) -> int:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP003 rule not yet implemented")
 class TestTYP003MissingVariableAnnotation:
     """
     TYP003: Missing variable annotation.
@@ -411,8 +413,8 @@ TIMEOUT = 30.0
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP003")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_module_level_with_annotation_ok(self) -> None:
         """
@@ -426,8 +428,8 @@ TIMEOUT: float = 30.0
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP003")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_underscore_variable_exempted(self) -> None:
         """
@@ -441,8 +443,8 @@ _ = some_function_with_side_effects()
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP003")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_for_loop_target_exempted(self) -> None:
         """
@@ -457,8 +459,8 @@ for item in items:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP003")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_comprehension_target_exempted(self) -> None:
         """
@@ -471,8 +473,8 @@ squares: list[int] = [x * x for x in range(10)]
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP003")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_class_level_variable(self) -> None:
         """
@@ -499,8 +501,27 @@ class Config:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP003 rule pending"
+        file: Path = Path("scenario.py")
+        source_lines: tuple[str, ...] = tuple(code_sample.splitlines())
+        tree: ast.Module = ast.parse(code_sample, filename=str(file))
+        parse_result: ParseResult = ParseResult(
+            file=file,
+            tree=tree,
+            source=code_sample,
+            source_lines=source_lines,
+            syntax_error=None,
+        )
+        config: PyGuardConfig = PyGuardConfig(
+            rules=RuleConfig(
+                typ003=TYP003Options(
+                    scope=frozenset({AnnotationScope.MODULE, AnnotationScope.CLASS}),
+                ),
+            ),
+        )
+        diagnostics: list[Diagnostic] = TYP003Rule().check(
+            parse_result=parse_result, config=config,
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
