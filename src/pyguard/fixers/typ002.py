@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import ast
-import io
 import tokenize
 from tokenize import TokenInfo
+
+from pyguard.fixers._util import apply_insertions, parse_source, tokenize_source
 
 
 def fix_missing_return_none(source: str) -> str:
@@ -16,9 +17,8 @@ def fix_missing_return_none(source: str) -> str:
     - Function is not a generator (no yield / yield from)
     - Function is not a dunder method
     """
-    try:
-        tree: ast.Module = ast.parse(source)
-    except SyntaxError:
+    tree: ast.Module | None = parse_source(source)
+    if tree is None:
         return source
 
     visitor: _FixableVisitor = _FixableVisitor()
@@ -27,7 +27,10 @@ def fix_missing_return_none(source: str) -> str:
     if not visitor.fixable:
         return source
 
-    tokens: list[TokenInfo] = _tokenize_source(source)
+    tokens: list[TokenInfo] = tokenize_source(source)
+    if not tokens:
+        return source
+
     insertions: list[tuple[int, int]] = []
 
     for node in visitor.fixable:
@@ -43,15 +46,7 @@ def fix_missing_return_none(source: str) -> str:
         line: str = lines[line_idx]
         lines[line_idx] = line[:col] + " -> None" + line[col:]
 
-    return "".join(lines)
-
-
-def _tokenize_source(source: str) -> list[TokenInfo]:
-    """Tokenize source code, returning empty list on error."""
-    try:
-        return list(tokenize.generate_tokens(io.StringIO(source).readline))
-    except tokenize.TokenError:
-        return []
+    return apply_insertions(source, lines)
 
 
 class _FixableVisitor(ast.NodeVisitor):

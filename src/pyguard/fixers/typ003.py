@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import ast
-import io
 import tokenize
 from tokenize import TokenInfo
+
+from pyguard.fixers._util import apply_insertions, parse_source, tokenize_source
 
 _BUILTIN_CONSTRUCTORS: frozenset[str] = frozenset({
     "int",
@@ -30,9 +31,8 @@ def fix_missing_variable_annotations(source: str) -> str:
     - The target name is not ``_``
     - The assigned value is a literal with obvious type or a builtin constructor call
     """
-    try:
-        tree: ast.Module = ast.parse(source)
-    except SyntaxError:
+    tree: ast.Module | None = parse_source(source)
+    if tree is None:
         return source
 
     visitor: _FixableVisitor = _FixableVisitor()
@@ -41,7 +41,7 @@ def fix_missing_variable_annotations(source: str) -> str:
     if not visitor.fixable:
         return source
 
-    tokens: list[TokenInfo] = _tokenize_source(source)
+    tokens: list[TokenInfo] = tokenize_source(source)
     if not tokens:
         return source
 
@@ -63,11 +63,17 @@ def fix_missing_variable_annotations(source: str) -> str:
         line: str = lines[line_idx]
         lines[line_idx] = line[:col] + f": {type_name}" + line[col:]
 
-    return "".join(lines)
+    return apply_insertions(source, lines)
 
 
 def _infer_type_annotation(node: ast.expr) -> str | None:
-    """Return the type name if the value's type is unambiguously inferable."""
+    """Return the type name if the value's type is unambiguously inferable.
+
+    For ``ast.Call`` nodes this checks whether the callee name is in
+    ``_BUILTIN_CONSTRUCTORS``.  No scope analysis is performed, so if a
+    builtin name has been rebound (e.g. ``list = MyListFactory``) the
+    inferred annotation may be incorrect.
+    """
     if isinstance(node, ast.Constant):
         value: object = node.value
         # bool must be checked before int (bool is a subclass of int)
@@ -92,14 +98,6 @@ def _infer_type_annotation(node: ast.expr) -> str | None:
         return None
 
     return None
-
-
-def _tokenize_source(source: str) -> list[TokenInfo]:
-    """Tokenize source code, returning empty list on error."""
-    try:
-        return list(tokenize.generate_tokens(io.StringIO(source).readline))
-    except tokenize.TokenError:
-        return []
 
 
 class _FixableVisitor(ast.NodeVisitor):
