@@ -25,6 +25,7 @@ import pytest
 
 from pyguard.fixers.typ002 import fix_missing_return_none
 from pyguard.fixers.typ003 import fix_missing_variable_annotations
+from pyguard.fixers.typ010 import fix_legacy_typing
 
 
 # =============================================================================
@@ -32,7 +33,6 @@ from pyguard.fixers.typ003 import fix_missing_variable_annotations
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP010 fix not yet implemented")
 class TestTYP010ModernTypingSyntaxFix:
     """
     TYP010: Modern typing syntax autofix.
@@ -72,12 +72,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return None
         ''')
 
-        # TODO: Replace with actual fixer call
-        # from pyguard.runner import fix_code
-        # actual_output = fix_code(input_code)
-        # assert actual_output == expected_output
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_union_to_pipe_syntax(self) -> None:
         """
@@ -97,8 +93,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return str(value)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_union_multiple_types(self) -> None:
         """
@@ -118,8 +114,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return str(value)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_list_to_builtin(self) -> None:
         """
@@ -139,8 +135,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return ["Alice", "Bob"]
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_dict_to_builtin(self) -> None:
         """
@@ -160,8 +156,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return {"timeout": 30, "retries": 3}
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_tuple_to_builtin(self) -> None:
         """
@@ -181,8 +177,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return (0, 0)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_set_to_builtin(self) -> None:
         """
@@ -202,8 +198,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return {"python", "typing"}
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_frozenset_to_builtin(self) -> None:
         """
@@ -223,8 +219,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return frozenset({1, 2, 3})
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_type_to_builtin(self) -> None:
         """
@@ -244,8 +240,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return str
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_nested_types(self) -> None:
         """
@@ -265,8 +261,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return None
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_multiple_types_same_line(self) -> None:
         """
@@ -286,8 +282,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return None
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_preserves_other_typing_imports(self) -> None:
         """
@@ -316,8 +312,8 @@ class TestTYP010ModernTypingSyntaxFix:
                     ...
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_parameter_annotations(self) -> None:
         """
@@ -337,8 +333,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 pass
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_variable_annotations(self) -> None:
         """
@@ -358,8 +354,8 @@ class TestTYP010ModernTypingSyntaxFix:
             CURRENT_USER: str | None = None
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_class_attributes(self) -> None:
         """
@@ -383,8 +379,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 name: str | None
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
     def test_fix_callable_preserved(self) -> None:
         """
@@ -406,8 +402,8 @@ class TestTYP010ModernTypingSyntaxFix:
                 return [func(x) for x in items]
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - TYP010 fix pending"
+        actual_output: str = fix_legacy_typing(input_code)
+        assert actual_output == expected_output
 
 
 # =============================================================================

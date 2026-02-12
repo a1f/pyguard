@@ -34,6 +34,7 @@ from pyguard.parser import ParseResult
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
 from pyguard.rules.typ003 import TYP003Rule
+from pyguard.rules.typ010 import TYP010Rule
 from pyguard.constants import AnnotationScope
 from pyguard.types import PyGuardConfig, RuleConfig, TYP003Options
 
@@ -63,6 +64,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
         "TYP001": TYP001Rule(),
         "TYP002": TYP002Rule(),
         "TYP003": TYP003Rule(),
+        "TYP010": TYP010Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -529,7 +531,6 @@ class Config:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="TYP010 rule not yet implemented")
 class TestTYP010LegacyTypingSyntax:
     """
     TYP010: Disallow legacy typing syntax.
@@ -567,8 +568,8 @@ def find_user(user_id: int) -> Optional[str]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_union_legacy_syntax(self) -> None:
         """
@@ -590,8 +591,8 @@ def parse(value: Union[str, int]) -> str:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_list_legacy_syntax(self) -> None:
         """
@@ -621,8 +622,8 @@ def get_mapping() -> Dict[str, int]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_tuple_legacy_syntax(self) -> None:
         """
@@ -642,8 +643,8 @@ def get_coords() -> Tuple[int, int]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_set_frozenset_legacy_syntax(self) -> None:
         """
@@ -671,8 +672,8 @@ def get_constants() -> FrozenSet[int]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_nested_legacy_syntax(self) -> None:
         """
@@ -695,8 +696,8 @@ def process() -> Optional[Dict[str, List[int]]]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_modern_syntax_ok(self) -> None:
         """
@@ -710,8 +711,8 @@ def get_data() -> dict[str, list[int]] | None:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - TYP010 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="TYP010")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
