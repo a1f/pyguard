@@ -65,6 +65,10 @@ DEFAULT_SEVERITIES: Final[dict[str, Severity]] = {
 
 SYNTAX_ERROR_CODE: Final[str] = "SYN001"
 
+IGN001_CODE: Final[str] = "IGN001"
+IGN002_CODE: Final[str] = "IGN002"
+IGN003_CODE: Final[str] = "IGN003"
+
 DEFAULT_EXCLUDES: Final[tuple[str, ...]] = (
     "**/__pycache__/**",
     "**/.*",

@@ -7,6 +7,7 @@ from pathlib import Path
 from pyguard.constants import SYNTAX_ERROR_CODE, Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
 from pyguard.formatters import Formatter, format_summary, get_formatter
+from pyguard.ignores import apply_ignores
 from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
 from pyguard.rules.base import Rule
 from pyguard.rules.registry import get_enabled_rules
@@ -48,12 +49,18 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
             )
             continue
 
+        file_diagnostics: list[Diagnostic] = []
         for rule in rules:
-            diagnostics: list[Diagnostic] = rule.check(
-                parse_result=result,
-                config=config,
+            file_diagnostics.extend(
+                rule.check(parse_result=result, config=config),
             )
-            collection.add_all(diagnostics=diagnostics)
+
+        filtered: list[Diagnostic] = apply_ignores(
+            diagnostics=file_diagnostics,
+            parse_result=result,
+            governance=config.ignores,
+        )
+        collection.add_all(diagnostics=filtered)
 
     exit_code: int = 1 if collection.has_errors else 0
     return LintResult(

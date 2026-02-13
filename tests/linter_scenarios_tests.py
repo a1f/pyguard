@@ -27,10 +27,11 @@ import ast
 from pathlib import Path
 from typing import NamedTuple
 
-import pytest
-
+from pyguard.constants import AnnotationScope
 from pyguard.diagnostics import Diagnostic
+from pyguard.ignores import apply_ignores
 from pyguard.parser import ParseResult
+from pyguard.rules.base import Rule
 from pyguard.rules.exp001 import EXP001Rule
 from pyguard.rules.exp002 import EXP002Rule
 from pyguard.rules.imp001 import IMP001Rule
@@ -40,8 +41,7 @@ from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
 from pyguard.rules.typ003 import TYP003Rule
 from pyguard.rules.typ010 import TYP010Rule
-from pyguard.constants import AnnotationScope
-from pyguard.types import PyGuardConfig, RuleConfig, TYP003Options
+from pyguard.types import IgnoreGovernance, PyGuardConfig, RuleConfig, TYP003Options
 
 
 class ExpectedDiagnostic(NamedTuple):
@@ -1336,7 +1336,47 @@ def _private_helper() -> None:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Ignore pragma system not yet implemented")
+def _check_code_with_ignores(
+    code: str,
+    *,
+    rule_codes: list[str],
+    governance: IgnoreGovernance | None = None,
+) -> list[Diagnostic]:
+    file: Path = Path("scenario.py")
+    source_lines: tuple[str, ...] = tuple(code.splitlines())
+    tree: ast.Module = ast.parse(code, filename=str(file))
+    parse_result: ParseResult = ParseResult(
+        file=file,
+        tree=tree,
+        source=code,
+        source_lines=source_lines,
+        syntax_error=None,
+    )
+    config: PyGuardConfig = PyGuardConfig()
+    all_rules: dict[str, Rule] = {
+        "TYP001": TYP001Rule(),
+        "TYP002": TYP002Rule(),
+        "TYP003": TYP003Rule(),
+        "TYP010": TYP010Rule(),
+        "KW001": KW001Rule(),
+        "IMP001": IMP001Rule(),
+        "RET001": RET001Rule(),
+        "EXP001": EXP001Rule(),
+        "EXP002": EXP002Rule(),
+    }
+    diagnostics: list[Diagnostic] = []
+    for rc in rule_codes:
+        diagnostics.extend(all_rules[rc].check(parse_result=parse_result, config=config))
+
+    if governance is None:
+        governance = IgnoreGovernance(require_reason=False)
+    return apply_ignores(
+        diagnostics=diagnostics,
+        parse_result=parse_result,
+        governance=governance,
+    )
+
+
 class TestIgnorePragmas:
     """
     Tests for the ignore/skip pragma system.
@@ -1362,11 +1402,12 @@ class TestIgnorePragmas:
 def add(x, y):  # pyguard: ignore[TYP001] because: legacy function
     return x + y
 '''
-        # TYP001 should be suppressed for line 1
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - ignore pragma system pending"
+        diagnostics: list[Diagnostic] = _check_code_with_ignores(
+            code_sample, rule_codes=["TYP001"],
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_block_level_ignore(self) -> None:
         """
@@ -1381,8 +1422,10 @@ def legacy_callback(event, data):
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - ignore pragma system pending"
+        diagnostics: list[Diagnostic] = _check_code_with_ignores(
+            code_sample, rule_codes=["TYP001", "TYP002"],
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_file_level_ignore(self) -> None:
         """
@@ -1399,8 +1442,10 @@ def load_plugin(name: str) -> object:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - ignore pragma system pending"
+        diagnostics: list[Diagnostic] = _check_code_with_ignores(
+            code_sample, rule_codes=["IMP001"],
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_require_ignore_reason(self) -> None:
         """
@@ -1412,7 +1457,6 @@ def load_plugin(name: str) -> object:
 def add(x, y):  # pyguard: ignore[TYP001]
     return x + y
 '''
-        # Configuration: require_ignore_reason = true
         expected_diagnostics: list[ExpectedDiagnostic] = [
             ExpectedDiagnostic(
                 line=1,
@@ -1421,8 +1465,12 @@ def add(x, y):  # pyguard: ignore[TYP001]
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - ignore pragma system pending"
+        diagnostics: list[Diagnostic] = _check_code_with_ignores(
+            code_sample,
+            rule_codes=["TYP001"],
+            governance=IgnoreGovernance(require_reason=True),
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_disallowed_ignore_code(self) -> None:
         """
@@ -1434,7 +1482,6 @@ def add(x, y):  # pyguard: ignore[TYP001]
 def get_value():  # pyguard: ignore[TYP002] because: not needed
     return 42
 '''
-        # Configuration: disallow_ignores = ["TYP002"]
         expected_diagnostics: list[ExpectedDiagnostic] = [
             ExpectedDiagnostic(
                 line=1,
@@ -1448,8 +1495,15 @@ def get_value():  # pyguard: ignore[TYP002] because: not needed
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - ignore pragma system pending"
+        diagnostics: list[Diagnostic] = _check_code_with_ignores(
+            code_sample,
+            rule_codes=["TYP002"],
+            governance=IgnoreGovernance(
+                require_reason=False,
+                disallow=frozenset({"TYP002"}),
+            ),
+        )
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
