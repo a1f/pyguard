@@ -31,6 +31,7 @@ import pytest
 
 from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
+from pyguard.rules.imp001 import IMP001Rule
 from pyguard.rules.kw001 import KW001Rule
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
@@ -67,6 +68,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
         "TYP003": TYP003Rule(),
         "TYP010": TYP010Rule(),
         "KW001": KW001Rule(),
+        "IMP001": IMP001Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -1013,7 +1015,6 @@ def divide(a: int, b: int) -> DivisionResult:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="IMP001 rule not yet implemented")
 class TestIMP001NoLocalImports:
     """
     IMP001: Disallow imports inside function bodies.
@@ -1045,8 +1046,8 @@ def process_json(data: str) -> dict[str, object]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_from_import_local(self) -> None:
         """
@@ -1068,8 +1069,8 @@ def get_path() -> str:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_multiple_local_imports(self) -> None:
         """
@@ -1103,8 +1104,8 @@ def complex_operation(x: int) -> str:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_nested_function_local_import(self) -> None:
         """
@@ -1127,8 +1128,8 @@ def outer() -> str:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_method_local_import(self) -> None:
         """
@@ -1150,8 +1151,8 @@ class DataProcessor:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_top_level_import_ok(self) -> None:
         """
@@ -1171,8 +1172,8 @@ def get_path() -> str:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_type_checking_import_ok(self) -> None:
         """
@@ -1191,8 +1192,8 @@ def process(item: "SomeType") -> None:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - IMP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="IMP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================

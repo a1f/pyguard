@@ -24,6 +24,7 @@ from typing import Any
 
 import pytest
 
+from pyguard.fixers.imp001 import fix_local_imports
 from pyguard.fixers.kw001 import FixResult, fix_keyword_only
 from pyguard.fixers.typ002 import fix_missing_return_none
 from pyguard.fixers.typ003 import fix_missing_variable_annotations
@@ -993,7 +994,6 @@ class TestTYP003AddVariableAnnotationFix:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="IMP001 fix not yet implemented")
 class TestIMP001MoveImportsFix:
     """
     IMP001: Move imports to module level autofix.
@@ -1031,8 +1031,8 @@ class TestIMP001MoveImportsFix:
                 return json.loads(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_fix_from_import_move(self) -> None:
         """
@@ -1053,8 +1053,8 @@ class TestIMP001MoveImportsFix:
                 return str(Path.cwd())
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_fix_multiple_imports_same_function(self) -> None:
         """
@@ -1079,8 +1079,8 @@ class TestIMP001MoveImportsFix:
                 return re.sub(r"\\s+", " ", str(parsed))
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_no_fix_with_existing_import(self) -> None:
         """
@@ -1104,8 +1104,8 @@ class TestIMP001MoveImportsFix:
                 return json.loads(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_no_fix_conditional_import(self) -> None:
         """
@@ -1133,8 +1133,8 @@ class TestIMP001MoveImportsFix:
                 return json.loads(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_fix_preserves_import_order(self) -> None:
         """
@@ -1160,8 +1160,8 @@ class TestIMP001MoveImportsFix:
                 return json.loads(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
     def test_fix_method_import(self) -> None:
         """
@@ -1184,8 +1184,8 @@ class TestIMP001MoveImportsFix:
                     return json.loads(data)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - IMP001 fix pending"
+        result: str = fix_local_imports(input_code)
+        assert result == expected_output
 
 
 # =============================================================================
