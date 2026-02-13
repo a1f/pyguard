@@ -31,6 +31,8 @@ import pytest
 
 from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
+from pyguard.rules.exp001 import EXP001Rule
+from pyguard.rules.exp002 import EXP002Rule
 from pyguard.rules.imp001 import IMP001Rule
 from pyguard.rules.kw001 import KW001Rule
 from pyguard.rules.ret001 import RET001Rule
@@ -71,6 +73,8 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
         "KW001": KW001Rule(),
         "IMP001": IMP001Rule(),
         "RET001": RET001Rule(),
+        "EXP001": EXP001Rule(),
+        "EXP002": EXP002Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -1202,7 +1206,6 @@ def process(item: "SomeType") -> None:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="EXP001 rule not yet implemented")
 class TestEXP001ExportableReturnTypes:
     """
     EXP001: Structured return types must be module-level and importable.
@@ -1237,8 +1240,8 @@ def get_result() -> "Result":
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - EXP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="EXP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_module_level_return_type_ok(self) -> None:
         """
@@ -1259,8 +1262,8 @@ def get_result() -> Result:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - EXP001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="EXP001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
@@ -1268,7 +1271,6 @@ def get_result() -> Result:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="EXP002 rule not yet implemented")
 class TestEXP002ExplicitExports:
     """
     EXP002: Enforce __all__ or explicit re-export policy.
@@ -1297,12 +1299,13 @@ def another_public_function() -> int:
             ExpectedDiagnostic(
                 line=1,
                 code="EXP002",
-                message="Module should define '__all__' to explicitly declare public API",
+                message="Module should define '__all__' to explicitly "
+                "declare public API",
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - EXP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="EXP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_all_defined_ok(self) -> None:
         """
@@ -1324,8 +1327,8 @@ def _private_helper() -> None:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - EXP002 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="EXP002")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================

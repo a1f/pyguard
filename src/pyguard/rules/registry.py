@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from pyguard.rules.base import Rule
+from pyguard.rules.exp001 import EXP001Rule
+from pyguard.rules.exp002 import EXP002Rule
 from pyguard.rules.imp001 import IMP001Rule
 from pyguard.rules.kw001 import KW001Rule
 from pyguard.rules.ret001 import RET001Rule
@@ -28,5 +30,7 @@ def _all_rules() -> list[Rule]:
         KW001Rule(),
         IMP001Rule(),
         RET001Rule(),
+        EXP001Rule(),
+        EXP002Rule(),
     ]
     return rules
