@@ -31,6 +31,7 @@ import pytest
 
 from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
+from pyguard.rules.kw001 import KW001Rule
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
 from pyguard.rules.typ003 import TYP003Rule
@@ -65,6 +66,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
         "TYP002": TYP002Rule(),
         "TYP003": TYP003Rule(),
         "TYP010": TYP010Rule(),
+        "KW001": KW001Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -720,7 +722,6 @@ def get_data() -> dict[str, list[int]] | None:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="KW001 rule not yet implemented")
 class TestKW001KeywordOnlyParameters:
     """
     KW001: Require keyword-only parameters.
@@ -757,8 +758,8 @@ def create_user(name: str, email: str, age: int) -> dict[str, str | int]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_keyword_only_syntax_ok(self) -> None:
         """
@@ -772,8 +773,8 @@ def create_user(*, name: str, email: str, age: int) -> dict[str, str | int]:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_single_parameter_exempted(self) -> None:
         """
@@ -787,8 +788,8 @@ def get_user(user_id: int) -> dict[str, str]:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_private_function_exempted(self) -> None:
         """
@@ -802,8 +803,8 @@ def _internal_helper(a: int, b: int, c: int) -> int:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_dunder_method_exempted(self) -> None:
         """
@@ -820,8 +821,8 @@ class Point:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_method_with_self_and_one_param_exempted(self) -> None:
         """
@@ -836,8 +837,8 @@ class Calculator:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
     def test_method_with_multiple_params_needs_keyword_only(self) -> None:
         """
@@ -859,8 +860,8 @@ class Calculator:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - KW001 rule pending"
+        actual: list[Diagnostic] = _check_code(code_sample, rule_code="KW001")
+        _assert_diagnostics_match(actual, expected_diagnostics)
 
 
 # =============================================================================
