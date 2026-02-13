@@ -33,8 +33,9 @@ pyguard/
 │       ├── diagnostics.py  # Diagnostic data model
 │       ├── parser.py       # AST parsing with syntax error detection
 │       ├── scanner.py      # File discovery (glob patterns)
-│       ├── runner.py       # Lint runner (scan → parse → check pipeline)
+│       ├── runner.py       # Lint runner (scan → parse → check → ignore pipeline)
 │       ├── formatters.py   # Text and JSON output formatters
+│       ├── ignores.py      # Ignore pragma parsing and diagnostic filtering
 │       ├── rules/
 │       │   ├── __init__.py # Empty
 │       │   ├── base.py     # Rule protocol (structural interface)
@@ -42,13 +43,20 @@ pyguard/
 │       │   ├── typ001.py   # Missing parameter annotations
 │       │   ├── typ002.py   # Missing return annotations
 │       │   ├── typ003.py   # Missing variable annotations
-│       │   └── typ010.py   # Legacy typing syntax detection
+│       │   ├── typ010.py   # Legacy typing syntax detection
+│       │   ├── kw001.py    # Missing keyword-only parameters
+│       │   ├── ret001.py   # Heterogeneous tuple returns
+│       │   ├── imp001.py   # In-function imports
+│       │   ├── exp001.py   # Module-level return types enforcement
+│       │   └── exp002.py   # __all__ enforcement
 │       └── fixers/
 │           ├── __init__.py # Empty
 │           ├── _util.py    # Shared fixer utils (parse, tokenize, validate)
 │           ├── typ002.py   # Add -> None (tokenize-based)
 │           ├── typ003.py   # Add variable annotations (tokenize-based)
-│           └── typ010.py   # Modernize typing syntax (LibCST-based)
+│           ├── typ010.py   # Modernize typing syntax (LibCST-based)
+│           ├── kw001.py    # Insert * separator for keyword-only params
+│           └── imp001.py   # Move in-function imports to module level
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py                 # Pytest fixtures
@@ -58,6 +66,14 @@ pyguard/
 │   ├── test_rules_typ001.py        # TYP001 unit tests
 │   ├── test_rules_typ002.py        # TYP002 unit tests
 │   ├── test_rules_typ010.py        # TYP010 unit tests
+│   ├── test_rules_kw001.py         # KW001 unit tests
+│   ├── test_rules_ret001.py        # RET001 unit tests
+│   ├── test_rules_imp001.py        # IMP001 unit tests
+│   ├── test_rules_exp001.py        # EXP001 unit tests
+│   ├── test_rules_exp002.py        # EXP002 unit tests
+│   ├── test_fixers_kw001.py        # KW001 fixer tests
+│   ├── test_fixers_imp001.py       # IMP001 fixer tests
+│   ├── test_ignores.py             # Ignore pragma and governance tests
 │   ├── test_runner.py              # Runner pipeline tests
 │   ├── test_parser.py              # Parser tests
 │   ├── test_scanner.py             # File scanner tests
@@ -132,11 +148,36 @@ Always use the project venv Python:
 | TYP002 | Missing return annotations | AST visitor | `-> None` (tokenize) | Done |
 | TYP003 | Missing variable annotations | AST visitor | Infer type (tokenize) | Done |
 | TYP010 | Legacy typing syntax | AST visitor | Full transform (LibCST) | Done |
-| KW001 | Keyword-only parameters | — | — | Pending |
-| RET001 | Heterogeneous tuple returns | — | — | Pending |
-| IMP001 | In-function imports | — | — | Pending |
-| EXP001 | Module-level return types | — | — | Pending |
-| EXP002 | `__all__` enforcement | — | — | Pending |
+| KW001 | Keyword-only parameters | AST visitor | Insert `*` separator (tokenize) | Done |
+| RET001 | Heterogeneous tuple returns | AST visitor | No | Done |
+| IMP001 | In-function imports | AST visitor | Move to module level (tokenize) | Done |
+| EXP001 | Module-level return types | AST visitor | No | Done |
+| EXP002 | `__all__` enforcement | AST visitor | No | Done |
+
+## Ignore Pragma System
+
+Inline suppression of diagnostics with governance rules:
+
+| Code | Description |
+|------|-------------|
+| IGN001 | Ignore pragma missing required reason |
+| IGN002 | Rule cannot be ignored (disallowed by config) |
+| IGN003 | File exceeds maximum allowed ignore directives |
+
+### Pragma Syntax
+
+```python
+x = 1  # pyguard: ignore[TYP003] because: legacy code
+# pyguard: ignore[TYP001, TYP002] because: generated code
+def foo(): ...
+
+# pyguard: ignore-file[TYP003] because: data module
+```
+
+- **Inline**: `# pyguard: ignore[CODE]` on the same line as the diagnostic
+- **Block**: `# pyguard: ignore[CODE]` on a standalone line suppresses the next statement
+- **File-level**: `# pyguard: ignore-file[CODE]` suppresses the entire file
+- Runner integrates ignores via `apply_ignores()` after rule checks
 
 ## Adding a New Rule
 
@@ -151,8 +192,9 @@ Always use the project venv Python:
 
 - **Protocol**: `Rule` in `rules/base.py` — requires `code` property and `check()` method
 - **Registry**: `rules/registry.py` — `get_enabled_rules(config=...)` returns non-OFF rules
-- **Runner**: `runner.py` — iterates enabled rules over parsed files, collects diagnostics
-- **Config**: Rule severity via `config.get_severity("CODE")`, rule-specific options via `config.rules.<code>`
+- **Runner**: `runner.py` — iterates enabled rules over parsed files, collects diagnostics, applies ignore pragmas
+- **Ignores**: `ignores.py` — parses `# pyguard: ignore[...]` pragmas, applies file/block/inline suppression, enforces governance
+- **Config**: Rule severity via `config.get_severity("CODE")`, rule-specific options via `config.rules.<code>`, ignore governance via `config.ignores`
 - **Fixer utils**: `fixers/_util.py` — `parse_source()`, `tokenize_source()`, `apply_insertions()` with output validation
 
 ### LibCST Notes
@@ -181,6 +223,8 @@ KW001 = "warn"
 [tool.pyguard.rules.KW001]
 min_params = 2
 exempt_dunder = true
+exempt_private = true
+exempt_overrides = true
 
 [tool.pyguard.ignores]
 require_reason = true
@@ -194,7 +238,7 @@ max_per_file = null
 - Use pytest fixtures from `conftest.py`
 - Test both success cases and error cases
 - CLI tests use Click's `CliRunner`
-- Scenario tests (`linter_scenarios_tests.py`, `fix_scenarios_tests.py`) are TDD-style with `@pytest.mark.skip` for unimplemented rules
+- Scenario tests: `linter_scenarios_tests.py` is fully enabled; `fix_scenarios_tests.py` has 3 remaining skipped tests (rewrite assist, combined fixes, fix stability)
 - Unit tests per rule: `test_rules_<code>.py` with `_make_parse_result()` helper
 
 ## Key Design Decisions
