@@ -141,9 +141,9 @@ def _find_colon_after(
     depth: int = 0
     for j in range(start, len(tokens)):
         t: TokenInfo = tokens[j]
-        if t.type == tokenize.OP and t.string in ("(", "["):
+        if t.type == tokenize.OP and t.string in ("(", "[", "{"):
             depth += 1
-        elif t.type == tokenize.OP and t.string in (")", "]"):
+        elif t.type == tokenize.OP and t.string in (")", "]", "}"):
             depth -= 1
         elif t.type == tokenize.OP and t.string == ":" and depth == 0:
             return (t.start[0] - 1, t.start[1])

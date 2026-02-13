@@ -19,13 +19,16 @@ Fix categories:
 
 import difflib
 import textwrap
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+from pyguard.fixers.kw001 import FixResult, fix_keyword_only
 from pyguard.fixers.typ002 import fix_missing_return_none
 from pyguard.fixers.typ003 import fix_missing_variable_annotations
 from pyguard.fixers.typ010 import fix_legacy_typing
+from pyguard.types import PyGuardConfig
 
 
 # =============================================================================
@@ -1190,7 +1193,6 @@ class TestIMP001MoveImportsFix:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="KW001 fix not yet implemented")
 class TestKW001KeywordOnlyFix:
     """
     KW001: Add keyword-only marker autofix.
@@ -1220,8 +1222,10 @@ class TestKW001KeywordOnlyFix:
                 return {"name": name, "email": email, "age": age}
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - KW001 fix pending"
+        fix_result: FixResult = fix_keyword_only(
+            sources={Path("test.py"): input_code}, config=PyGuardConfig(),
+        )
+        assert fix_result.sources[Path("test.py")] == expected_output
 
     def test_fix_method_preserves_self(self) -> None:
         """
@@ -1241,8 +1245,10 @@ class TestKW001KeywordOnlyFix:
                     return {"name": name, "email": email, "age": age}
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - KW001 fix pending"
+        fix_result: FixResult = fix_keyword_only(
+            sources={Path("test.py"): input_code}, config=PyGuardConfig(),
+        )
+        assert fix_result.sources[Path("test.py")] == expected_output
 
     def test_fix_classmethod_preserves_cls(self) -> None:
         """
@@ -1264,8 +1270,10 @@ class TestKW001KeywordOnlyFix:
                     return cls()
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - KW001 fix pending"
+        fix_result: FixResult = fix_keyword_only(
+            sources={Path("test.py"): input_code}, config=PyGuardConfig(),
+        )
+        assert fix_result.sources[Path("test.py")] == expected_output
 
 
 # =============================================================================

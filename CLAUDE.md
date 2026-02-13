@@ -12,12 +12,16 @@ PyGuard is a strict Python linter enforcing typing, keyword-only APIs, and struc
 - **Testing**: pytest, pytest-cov
 - **Type Checking**: mypy (strict mode)
 - **Linting**: ruff
+- **CST Rewriting**: libcst (optional `[fix]` dependency, used by TYP010 fixer)
 
 ## Project Structure
 
 ```
 pyguard/
 ├── pyproject.toml          # Project metadata + [tool.pyguard] schema
+├── DESIGN.md               # Full design document
+├── plans/                  # Implementation plans
+│   └── linting-rules-implementation.md
 ├── src/
 │   └── pyguard/
 │       ├── __init__.py     # Empty (package marker only)
@@ -25,45 +29,80 @@ pyguard/
 │       ├── cli.py          # CLI entry point (click)
 │       ├── config.py       # Config loading logic
 │       ├── constants.py    # Rule codes, default values, enums
-│       └── types.py        # Common types and dataclasses
+│       ├── types.py        # Common types and dataclasses
+│       ├── diagnostics.py  # Diagnostic data model
+│       ├── parser.py       # AST parsing with syntax error detection
+│       ├── scanner.py      # File discovery (glob patterns)
+│       ├── runner.py       # Lint runner (scan → parse → check pipeline)
+│       ├── formatters.py   # Text and JSON output formatters
+│       ├── rules/
+│       │   ├── __init__.py # Empty
+│       │   ├── base.py     # Rule protocol (structural interface)
+│       │   ├── registry.py # Rule registry, get_enabled_rules()
+│       │   ├── typ001.py   # Missing parameter annotations
+│       │   ├── typ002.py   # Missing return annotations
+│       │   ├── typ003.py   # Missing variable annotations
+│       │   └── typ010.py   # Legacy typing syntax detection
+│       └── fixers/
+│           ├── __init__.py # Empty
+│           ├── _util.py    # Shared fixer utils (parse, tokenize, validate)
+│           ├── typ002.py   # Add -> None (tokenize-based)
+│           ├── typ003.py   # Add variable annotations (tokenize-based)
+│           └── typ010.py   # Modernize typing syntax (LibCST-based)
 ├── tests/
 │   ├── __init__.py
-│   ├── conftest.py         # Pytest fixtures
-│   ├── test_config.py      # Config system tests
-│   └── test_cli.py         # CLI integration tests
+│   ├── conftest.py                 # Pytest fixtures
+│   ├── linter_scenarios_tests.py   # TDD scenarios for all rules
+│   ├── fix_scenarios_tests.py      # TDD scenarios for all fixers
+│   ├── test_rules_framework.py     # Rule protocol and registry tests
+│   ├── test_rules_typ001.py        # TYP001 unit tests
+│   ├── test_rules_typ002.py        # TYP002 unit tests
+│   ├── test_rules_typ010.py        # TYP010 unit tests
+│   ├── test_runner.py              # Runner pipeline tests
+│   ├── test_parser.py              # Parser tests
+│   ├── test_scanner.py             # File scanner tests
+│   ├── test_diagnostics.py         # Diagnostic model tests
+│   ├── test_formatters.py          # Formatter tests
+│   ├── test_config.py              # Config system tests
+│   └── test_cli.py                 # CLI integration tests
 └── README.md
+```
+
+## Environment
+
+Always use the project venv Python:
+
+```bash
+.venv/bin/python
 ```
 
 ## Development Setup
 
 ```bash
 # Install in development mode with dev dependencies
-pip install -e ".[dev]"
+.venv/bin/python -m pip install -e ".[dev]"
 
 # Verify installation
-pyguard --help
+.venv/bin/python -m pyguard --help
 ```
 
 ## Common Commands
 
 ```bash
 # Run linter
-pyguard lint .
-pyguard lint src/
-
-# Show configuration
-pyguard config
-pyguard config --json
-pyguard config --validate
+.venv/bin/python -m pyguard lint src/
 
 # Run tests
-pytest
+.venv/bin/python -m pytest --tb=short -q
 
 # Type checking
-mypy src/
+.venv/bin/python -m mypy src/ --strict
 
 # Lint the codebase
-ruff check src/
+.venv/bin/python -m ruff check src/
+
+# Validation gate (run after every step before committing)
+.venv/bin/python -m pytest --tb=short -q && .venv/bin/python -m mypy src/ --strict && .venv/bin/python -m ruff check src/
 ```
 
 ## Code Conventions
@@ -85,19 +124,42 @@ ruff check src/
 - Use `ConfigError` for configuration-related errors
 - Collect all validation errors before raising (better UX than fail-fast)
 
-## Rule Codes
+## Rule Implementation Status
 
-| Code | Description |
-|------|-------------|
-| TYP001 | Missing function parameter annotations |
-| TYP002 | Missing function return annotation |
-| TYP003 | Missing variable annotation |
-| TYP010 | Disallow legacy typing syntax |
-| KW001 | Require keyword-only parameters |
-| RET001 | Disallow heterogeneous tuple returns |
-| IMP001 | Disallow imports inside function bodies |
-| EXP001 | Structured return types must be module-level |
-| EXP002 | Enforce `__all__` or explicit re-export policy |
+| Code | Description | Detection | Autofix | Status |
+|------|-------------|-----------|---------|--------|
+| TYP001 | Missing parameter annotations | AST visitor | No | Done |
+| TYP002 | Missing return annotations | AST visitor | `-> None` (tokenize) | Done |
+| TYP003 | Missing variable annotations | AST visitor | Infer type (tokenize) | Done |
+| TYP010 | Legacy typing syntax | AST visitor | Full transform (LibCST) | Done |
+| KW001 | Keyword-only parameters | — | — | Pending |
+| RET001 | Heterogeneous tuple returns | — | — | Pending |
+| IMP001 | In-function imports | — | — | Pending |
+| EXP001 | Module-level return types | — | — | Pending |
+| EXP002 | `__all__` enforcement | — | — | Pending |
+
+## Adding a New Rule
+
+1. Create `src/pyguard/rules/<code>.py` — class with `code` property + `check()` method + `_Visitor(ast.NodeVisitor)`
+2. Register in `src/pyguard/rules/registry.py` — import rule class + add to `_all_rules()` list
+3. Create `src/pyguard/fixers/<code>.py` (if autofix applies) — tokenize-based for simple insertions, LibCST for complex transforms
+4. Create `tests/test_rules_<code>.py` — follow pattern from `test_rules_typ001.py`
+5. Enable scenarios in `tests/linter_scenarios_tests.py` — remove `@pytest.mark.skip`, add rule to `_check_code` dict, replace `assert False` stubs with `_check_code`/`_assert_diagnostics_match` calls
+6. Enable fix scenarios in `tests/fix_scenarios_tests.py` — remove `@pytest.mark.skip`, import fixer function, replace `assert False` stubs with actual fixer calls
+
+### Rule Architecture
+
+- **Protocol**: `Rule` in `rules/base.py` — requires `code` property and `check()` method
+- **Registry**: `rules/registry.py` — `get_enabled_rules(config=...)` returns non-OFF rules
+- **Runner**: `runner.py` — iterates enabled rules over parsed files, collects diagnostics
+- **Config**: Rule severity via `config.get_severity("CODE")`, rule-specific options via `config.rules.<code>`
+- **Fixer utils**: `fixers/_util.py` — `parse_source()`, `tokenize_source()`, `apply_insertions()` with output validation
+
+### LibCST Notes
+
+- `libcst.Module` has no `.walk()` method — use `.visit()` with a `CSTTransformer` subclass
+- For read-only collection, subclass `CSTTransformer` and override `visit_*` methods (return `True` to continue)
+- `RemovalSentinel.REMOVE` removes statements but may leave leading blank lines — strip with `.lstrip("\n")`
 
 ## Configuration Schema
 
@@ -132,6 +194,8 @@ max_per_file = null
 - Use pytest fixtures from `conftest.py`
 - Test both success cases and error cases
 - CLI tests use Click's `CliRunner`
+- Scenario tests (`linter_scenarios_tests.py`, `fix_scenarios_tests.py`) are TDD-style with `@pytest.mark.skip` for unimplemented rules
+- Unit tests per rule: `test_rules_<code>.py` with `_make_parse_result()` helper
 
 ## Key Design Decisions
 
@@ -139,6 +203,8 @@ max_per_file = null
 2. **Dataclasses for config** - Minimal dependencies, immutable by default
 3. **pyproject.toml only** - Consistent with modern Python tooling (ruff, black, mypy)
 4. **Strict defaults** - Encourage best practices for typing rules
+5. **LibCST for complex fixers** - Preserves formatting, handles nested transforms (optional dependency)
+6. **Tokenize for simple fixers** - No extra dependency for insertion-only fixes (-> None, `: type`)
 
 ---
 
@@ -151,7 +217,7 @@ All work must follow a structured plan with three levels:
 - **Phases** - Groups of related steps within a chapter
 - **Steps** - Minimal implementation units (the atomic work item)
 
-See `DESIGN.md` Section 8 for the current implementation plan.
+See `plans/linting-rules-implementation.md` for the current implementation plan.
 
 ### Commit Rules
 

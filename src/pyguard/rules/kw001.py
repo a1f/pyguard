@@ -84,11 +84,11 @@ class _Visitor(ast.NodeVisitor):
         positional_args: list[ast.arg] = list(node.args.args)
 
         # Strip self/cls from count for methods
-        skip: int = 0
+        self_cls_offset: int = 0
         if is_method and positional_args and positional_args[0].arg in ("self", "cls"):
-            skip = 1
+            self_cls_offset = 1
 
-        effective_count: int = len(positional_args) - skip
+        effective_count: int = len(positional_args) - self_cls_offset
         if effective_count < self._opts.min_params:
             return
 

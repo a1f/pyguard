@@ -11,7 +11,7 @@ def tokenize_source(source: str) -> list[TokenInfo]:
     """Tokenize source code, returning empty list on error."""
     try:
         return list(tokenize.generate_tokens(io.StringIO(source).readline))
-    except tokenize.TokenError:
+    except (tokenize.TokenError, SyntaxError):
         return []
 
 
@@ -19,7 +19,7 @@ def parse_source(source: str) -> ast.Module | None:
     """Parse source code, returning ``None`` on error."""
     try:
         return ast.parse(source)
-    except (SyntaxError, RecursionError):
+    except (SyntaxError, RecursionError, ValueError):
         return None
 
 
