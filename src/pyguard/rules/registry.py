@@ -4,6 +4,7 @@ from __future__ import annotations
 from pyguard.rules.base import Rule
 from pyguard.rules.imp001 import IMP001Rule
 from pyguard.rules.kw001 import KW001Rule
+from pyguard.rules.ret001 import RET001Rule
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
 from pyguard.rules.typ003 import TYP003Rule
@@ -26,5 +27,6 @@ def _all_rules() -> list[Rule]:
         TYP010Rule(),
         KW001Rule(),
         IMP001Rule(),
+        RET001Rule(),
     ]
     return rules

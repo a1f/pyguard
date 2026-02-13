@@ -33,6 +33,7 @@ from pyguard.diagnostics import Diagnostic
 from pyguard.parser import ParseResult
 from pyguard.rules.imp001 import IMP001Rule
 from pyguard.rules.kw001 import KW001Rule
+from pyguard.rules.ret001 import RET001Rule
 from pyguard.rules.typ001 import TYP001Rule
 from pyguard.rules.typ002 import TYP002Rule
 from pyguard.rules.typ003 import TYP003Rule
@@ -69,6 +70,7 @@ def _check_code(code: str, *, rule_code: str) -> list[Diagnostic]:
         "TYP010": TYP010Rule(),
         "KW001": KW001Rule(),
         "IMP001": IMP001Rule(),
+        "RET001": RET001Rule(),
     }
     rule: object = rules[rule_code]
     return rule.check(parse_result=parse_result, config=config)  # type: ignore[union-attr]
@@ -871,7 +873,6 @@ class Calculator:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="RET001 rule not yet implemented")
 class TestRET001NoTuplePacking:
     """
     RET001: Disallow heterogeneous tuple returns.
@@ -908,8 +909,8 @@ def get_user_info(user_id: int) -> tuple[str, int, bool]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_implicit_tuple_return(self) -> None:
         """
@@ -932,8 +933,8 @@ def divide(a: int, b: int) -> tuple[int, int]:
             ),
         ]
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_homogeneous_tuple_ok(self) -> None:
         """
@@ -947,8 +948,8 @@ def get_ids() -> tuple[int, ...]:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_single_value_return_ok(self) -> None:
         """
@@ -962,8 +963,8 @@ def get_name() -> str:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_dataclass_return_ok(self) -> None:
         """
@@ -985,8 +986,8 @@ def get_user_info(user_id: int) -> UserInfo:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
     def test_namedtuple_return_ok(self) -> None:
         """
@@ -1006,8 +1007,8 @@ def divide(a: int, b: int) -> DivisionResult:
 '''
         expected_diagnostics: list[ExpectedDiagnostic] = []
 
-        _unused = (code_sample, expected_diagnostics)
-        assert False, "Test not implemented - RET001 rule pending"
+        diagnostics: list[Diagnostic] = _check_code(code_sample, rule_code="RET001")
+        _assert_diagnostics_match(diagnostics, expected_diagnostics)
 
 
 # =============================================================================
