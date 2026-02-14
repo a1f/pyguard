@@ -212,7 +212,7 @@ PyGuard is configured via `[tool.pyguard]` in `pyproject.toml`:
 python_version = "3.11"
 include = ["src/**/*.py", "tests/**/*.py"]
 exclude = ["**/__pycache__/**"]
-output_format = "text"  # "text" | "json" | "github"
+output_format = "text"  # "text" | "json"
 show_source = true
 color = "auto"  # "auto" | "always" | "never"
 

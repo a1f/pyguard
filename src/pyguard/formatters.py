@@ -74,8 +74,6 @@ class JsonFormatter:
 def get_formatter(*, output_format: OutputFormat) -> Formatter:
     if output_format == OutputFormat.JSON:
         return JsonFormatter()
-    if output_format == OutputFormat.GITHUB:
-        raise NotImplementedError("GitHub annotation format is not yet implemented")
     return TextFormatter()
 
 

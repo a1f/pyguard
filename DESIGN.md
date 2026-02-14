@@ -11,7 +11,7 @@ Build a Python 3.11+ linter and formatter that enforces a strict style guide cen
 - **Modern typing syntax** (PEP 585 / PEP 604)
 - **Configurable rules**, messages, and fix behavior
 - **Explicit skip/ignore mechanisms**
-- **Optional "rewrite assist" channel** for complex refactors
+- **Interactive tryout mode** for reviewing fixes before applying
 
 The first milestone is a usable CLI installable via pip, supporting single file and repository-wide execution, with deterministic output suitable for CI.
 
@@ -21,7 +21,7 @@ The first milestone is a usable CLI installable via pip, supporting single file 
 
 - Replacing Black/Ruff/Flake8 wholesale. This tool complements them.
 - Proving type correctness end-to-end (that remains the job of Pyright/MyPy).
-- Fully automatic deep refactors by default (e.g., updating all call sites after signature changes). Those are "rewrite assist" only.
+- Fully automatic deep refactors (e.g., updating all call sites after signature changes).
 
 ---
 
@@ -30,14 +30,15 @@ The first milestone is a usable CLI installable via pip, supporting single file 
 ### 3.1 Modes
 
 - **lint**: read-only, emits diagnostics with codes and locations.
-- **fix**: safe, local transformations (syntax rewrites, easy edits).
-- **rewrite** (optional / gated): larger refactors (e.g., tuple → dataclass + update returns), potentially requiring human/agent involvement.
+- **fix**: safe, local transformations (syntax rewrites, easy edits). `--tryout` for interactive approval.
+- **explain**: human-readable rule documentation and examples.
 
 ### 3.2 Output formats
 
 - Human-readable console output
 - `--format=json` for tool/agent integration
 - `--diff` patch output for review workflows
+- `--verbose`/`--debug` for troubleshooting
 
 ### 3.3 Repository configuration
 
@@ -157,9 +158,10 @@ Rule registry loaded from entry points to support plugins later.
 ### 6.4 CLI and packaging
 
 - `pyguard` CLI:
-  - `pyguard lint`
-  - `pyguard fix`
-  - `pyguard rewrite`
+  - `pyguard lint` — detect issues
+  - `pyguard fix` — apply safe fixes (`--diff`, `--tryout`, `--check`)
+  - `pyguard explain` — rule documentation
+  - `pyguard config` — show/validate configuration
 - pip installable, with `console_scripts` entrypoint
 - Pre-commit hook template provided
 
@@ -168,8 +170,8 @@ Rule registry loaded from entry points to support plugins later.
 JSON diagnostics output includes:
 
 - rule code, message, file, range
-- suggested rewrite plan (if available)
-- "rewrite required" flag for non-autofixable issues
+- fix availability flag per diagnostic
+- structured output suitable for CI and editor integrations
 
 ---
 
@@ -178,9 +180,13 @@ JSON diagnostics output includes:
 **What PyGuard can do right now:**
 
 - Install via `pip install -e .` and run as `pyguard` CLI
-- `pyguard lint <paths>` — scans Python files, detects syntax errors (SYN001), reports with exit code 1
+- `pyguard lint <paths>` — scans Python files, runs all 9 rules, reports diagnostics
 - `pyguard config` — displays resolved configuration (text or `--json`)
 - `pyguard config --validate` — validates `pyproject.toml` configuration
+- All 9 lint rules implemented: TYP001, TYP002, TYP003, TYP010, KW001, IMP001, RET001, EXP001, EXP002
+- 5 autofixers: TYP010 (LibCST), TYP002, TYP003, IMP001 (tokenize), KW001 (cross-file)
+- Fix pipeline (`fixers/pipeline.py`) chains str-to-str fixers in dependency order
+- Ignore pragma system with inline, block, and file-level suppression + governance (IGN001-003)
 - File discovery with glob-based include/exclude patterns from `[tool.pyguard]`
 - Config loading from `pyproject.toml` with per-rule severity, ignore governance, and rule-specific options
 - Text and JSON output formatters with source line display and caret positioning
@@ -198,9 +204,12 @@ JSON diagnostics output includes:
 | `parser.py` | AST parsing with syntax error capture |
 | `diagnostics.py` | `Diagnostic`, `SourceLocation`, `DiagnosticCollection` |
 | `formatters.py` | Text and JSON formatters, summary |
-| `runner.py` | Lint orchestrator pipeline |
+| `runner.py` | Lint orchestrator pipeline (scan → parse → check → ignore) |
+| `ignores.py` | Ignore pragma parsing and diagnostic filtering |
+| `rules/*.py` | 9 rule modules + base protocol + registry |
+| `fixers/*.py` | 5 fixer modules + pipeline + shared utils |
 
-**Test coverage:** 101 tests passing across 7 test files. mypy and ruff clean.
+**Test coverage:** 457 tests passing across 22 test files. mypy strict and ruff clean.
 
 ---
 
@@ -231,123 +240,119 @@ Everything needed for a working CLI that can scan files and report syntax errors
 
 ---
 
-### Phase 2 — Ignore System + Rule Framework
+### Phase 2 — Ignore System + Rule Framework [DONE]
 
-Build the infrastructure for suppressing diagnostics and plugging in lint rules.
+Ignore pragma system and rule framework with all 9 rules.
 
-#### Step 3 — Ignore/Skip Pragmas
-- Create `src/pyguard/ignores.py`
-- Parse `# pyguard: ignore[CODE] because: ...` comments (line-level)
-- Parse `# pyguard: ignore-file[CODE] because: ...` comments (file-level)
-- Block/function-level ignore (comment preceding definition)
-- Enforce governance: `require_reason`, `disallow`, `max_per_file`
-- Filter diagnostics through ignore system in runner
-- Tests: suppression accuracy, governance violations, edge cases
+### Phase 3 — Typing Rules [DONE]
 
-**Exit criteria:** ignores suppress diagnostics exactly as specified; governance flags violations.
+TYP001, TYP002, TYP003, TYP010 — detection + autofixers.
 
-#### Step 4 — Rule Framework + First Rule (IMP001)
-- Create `src/pyguard/rules/base.py` — rule interface (`check()` method, rule metadata)
-- Create rule registry with discovery from `rules/` package
-- Integrate rule execution into runner pipeline (parse → check rules → collect diagnostics)
-- Create `src/pyguard/rules/imp001.py` — detect imports inside function bodies
-- Handle edge cases: `TYPE_CHECKING` blocks, `try/except ImportError` patterns
-- Tests: valid/invalid import positions, exemptions, integration with ignore system
+### Phase 4 — API & Return Rules [DONE]
 
-**Exit criteria:** IMP001 works reliably; suppression works; unit tests pass.
+KW001, RET001, EXP001, EXP002 — detection + KW001 autofix.
 
 ---
 
-### Phase 3 — Typing Rules
+### Phase 5 — CLI Commands: fix + explain
 
-Core value proposition: enforce type annotations across the codebase.
+Wire the existing fixers into CLI commands and add rule documentation.
 
-#### Step 5 — Function Annotation Rules (TYP001 + TYP002)
-- Create `src/pyguard/rules/typ001.py` — missing parameter annotations
-- Create `src/pyguard/rules/typ002.py` — missing return annotations
-- Configurable exemptions: dunder methods (`exempt_dunder`), `self`/`cls` params (`exempt_self_cls`)
-- Override detection heuristic: `@override` decorator, protocol implementations
-- Tests: functions, methods, lambdas, nested functions, decorators, exemptions
+#### Step 10 — `pyguard fix` command
 
-**Exit criteria:** correct detection; good error messaging; exemptions work.
+Add a `fix` subcommand that applies safe autofixes to files.
 
-#### Step 6 — Modern Typing Syntax (TYP010)
-- Create `src/pyguard/rules/typ010.py` — detect legacy typing imports and usage
-- Detect: `Optional[T]`, `Union[A, B]`, `List[T]`, `Dict[K, V]`, `Tuple[...]`, `Set[T]`, `FrozenSet[T]`, `Type[T]`
-- Respect `python_version` config (only flag if target version supports modern syntax)
-- Tests: all legacy forms, nested generics, `from typing import ...` vs `typing.List`
+```
+pyguard fix src/              # fix files in-place
+pyguard fix src/ --diff       # print unified diff, don't write
+pyguard fix src/ --check      # exit 1 if any file would change (CI mode)
+```
 
-**Exit criteria:** deterministic detection; tests cover edge cases.
+Implementation:
+- Read files via scanner, run `fix_all()` pipeline (TYP010 → IMP001 → TYP002 → TYP003)
+- Compare before/after: if changed, write back (or print diff in `--diff` mode)
+- Report summary: `Fixed 3 files, 12 issues`
+- `--check` mode for CI: exit 1 if any file would be modified, exit 0 if clean
+- KW001 fixer excluded from pipeline (unsafe, cross-file) — separate `--unsafe-fixes` flag later
 
-#### Step 7 — Variable Annotation Rule (TYP003)
-- Create `src/pyguard/rules/typ003.py` — missing variable annotations
-- Configurable scope: `module`, `class`, `local` (default: module-only)
-- Exemptions: `_ = ...`, comprehension targets, for-loop targets, augmented assignments
-- Tests: all scope levels, exemption cases, false positive avoidance
+**Exit criteria:** `pyguard fix` modifies files correctly; `--diff` output is reviewable; `--check` works in CI.
 
-**Exit criteria:** module-level enforcement works with low false-positive rate.
+#### Step 11 — `pyguard explain` command
 
----
+Add an `explain` subcommand that prints human-readable rule documentation.
 
-### Phase 4 — API & Return Rules
+```
+pyguard explain TYP001        # show rule explanation
+pyguard explain --all         # list all rules with summaries
+```
 
-Enforce API design patterns: keyword-only parameters, structured returns.
+For each rule, display:
+- Code and name
+- What it detects and why it matters
+- Good/bad code examples
+- Available autofix (if any)
+- Configuration options
+- How to suppress (`# pyguard: ignore[CODE] because: ...`)
 
-#### Step 8 — Keyword-Only API Rule (KW001)
-- Create `src/pyguard/rules/kw001.py` — require `*` separator for keyword-only params
-- Apply to public functions by default (non-underscore prefix)
-- Configurable: `min_params` threshold, `exempt_dunder`, `exempt_private`, `exempt_overrides`
-- Tests: various function signatures, methods, static/class methods, exemptions
+Implementation:
+- Each rule module exposes a docstring or structured metadata
+- `explain` command reads metadata and formats for terminal
+- `--all` flag lists all rules in a table with code, severity, and one-line description
 
-**Exit criteria:** accurate detection; does not flag internal helpers; clear guidance.
-
-#### Step 9 — Structured Return Rule (RET001)
-- Create `src/pyguard/rules/ret001.py` — detect heterogeneous tuple returns
-- Allow homogeneous variadic returns annotated as `tuple[T, ...]`
-- Flag `return a, b` without structured type
-- Produce diagnostic with suggestion (dataclass/NamedTuple)
-- Tests: tuple returns, single returns, annotated returns, nested functions
-
-**Exit criteria:** detection works; suggestions are usable; suppression works.
+**Exit criteria:** every rule has a useful explanation; `--all` lists all 9 rules.
 
 ---
 
-### Phase 5 — Fix Engine + Agent Integration
+### Phase 6 — Logging + Tryout Mode
 
-Add autofix capabilities and structured output for agent workflows.
+Add observability for debugging and an interactive fix preview workflow.
 
-#### Step 10 — Fix Infrastructure
-- Choose fix technology (LibCST vs ast+tokenize)
-- Create `src/pyguard/fixer.py` — fix engine with edit application
-- Add `pyguard fix` CLI command
-- Implement safe fixes: TYP010 rewrites (`Optional[T]` → `T | None`, etc.)
-- Implement conservative fix: add `-> None` for functions without return statements
-- `--diff` output mode for review workflows
-- Tests: round-trip stability, formatting preservation, fix accuracy
+#### Step 12 — Structured logging
 
-**Exit criteria:** safe fixes apply correctly; `--diff` output is reviewable.
+Add `--verbose` and `--debug` flags for troubleshooting.
 
-#### Step 11 — Rewrite Assist + Agent Boundary
-- Define stable JSON schema for "rewrite-required diagnostics"
-- `pyguard explain CODE` — human-readable rule explanation
-- Structured rewrite plan payload in JSON output (suggested type name, fields, impacted locations)
-- Optional: `pyguard rewrite --apply` gated behind explicit flag
-- Tests: JSON schema validation, explain output, plan generation
+```
+pyguard lint src/ --verbose   # show files scanned, rules applied, timing
+pyguard lint src/ --debug     # full trace: AST visits, ignore resolution, config
+```
 
-**Exit criteria:** the tool can hand off complex cases to an agent workflow cleanly.
+Implementation:
+- Use Python `logging` module with named loggers per module (`pyguard.runner`, `pyguard.rules.typ001`, etc.)
+- `--verbose` → INFO level: file count, rule count, timing per phase
+- `--debug` → DEBUG level: per-file details, AST node visits, ignore pragma matches, config resolution
+- Log to stderr so stdout remains clean for `--format json` piping
+- Add timing instrumentation to runner phases (scan, parse, check, ignore, format)
+
+**Exit criteria:** `--verbose` shows useful progress; `--debug` is sufficient to diagnose false positives/negatives.
+
+#### Step 13 — Tryout mode (`pyguard fix --tryout`)
+
+Interactive fix preview: show each proposed change, let user approve or skip.
+
+```
+pyguard fix src/ --tryout     # interactive: show diff per file, ask before writing
+```
+
+Workflow:
+1. Run fix pipeline on each file
+2. If file changed, display a colored unified diff
+3. Prompt: `Apply this fix? [y]es / [n]o / [a]ll / [q]uit`
+4. `y` — write this file, continue to next
+5. `n` — skip this file, continue to next
+6. `a` — apply all remaining without asking
+7. `q` — stop, don't apply remaining files
+
+This is the "suggest edits → user approves → apply" workflow. Combines `--diff` preview with interactive approval.
+
+**Exit criteria:** tryout mode shows diffs, respects user choices, writes only approved files.
 
 ---
 
-### Phase 6 — Packaging & Polish
+### Phase 7 — Packaging & Polish
 
 Final polish for public release.
 
-#### Step 12 — GithubFormatter + Output Polish
-- Implement `GithubFormatter` class (`::error file=...,line=...,col=...::` format)
-- Add `--format github` to CLI choices
-- Tests: GitHub annotation format, multi-diagnostic output
-
-#### Step 13 — Packaging, Pre-commit, CI
+#### Step 14 — Packaging, Pre-commit, CI
 - Publishable packaging metadata, versioning, changelog
 - Pre-commit hook configuration (`.pre-commit-hooks.yaml`)
 - CI example (GitHub Actions) with recommended pipeline order
@@ -357,13 +362,14 @@ Final polish for public release.
 
 ---
 
-## 9. Key Decisions to Record Early
+## 9. Key Decisions Recorded
 
-1. **Fix technology**: LibCST vs ad-hoc token edits
-2. **Typing enforcement scope**: module-only vs locals by default
-3. **Keyword-only enforcement scope**: public API only vs all functions
-4. **Rewrite policy**: whether rewrite mode ever modifies call sites automatically
-5. **Export policy**: whether to mandate `__all__` / re-exports for return types
+1. **Fix technology**: LibCST for complex transforms (TYP010), tokenize for simple insertions (TYP002, TYP003, IMP001, KW001)
+2. **Typing enforcement scope**: all scopes by default (module, class, local)
+3. **Keyword-only enforcement scope**: public API only (exempt dunder, private, overrides)
+4. **Rewrite policy**: dropped — no automatic rewrite-assist mode. Complex refactors are left to the user/agent
+5. **Export policy**: EXP001 enforces module-level return types; EXP002 enforces `__all__`
+6. **GitHub formatter**: dropped — `text` and `json` formats are sufficient; CI integration via `--format json`
 
 ---
 
@@ -373,46 +379,67 @@ Final polish for public release.
 src/pyguard/
 ├── __init__.py
 ├── __main__.py
-├── cli.py
-├── config.py
-├── constants.py
-├── types.py
-├── scanner.py
-├── parser.py
-├── diagnostics.py
-├── formatters.py
-├── runner.py
-├── ignores.py          (Phase 2)
-└── rules/              (Phase 2+)
+├── cli.py              # Click CLI (lint, config commands)
+├── config.py           # Config loading from pyproject.toml
+├── constants.py        # Rule codes, enums, defaults
+├── types.py            # Dataclasses for configuration
+├── scanner.py          # File discovery with include/exclude globs
+├── parser.py           # AST parsing with syntax error capture
+├── diagnostics.py      # Diagnostic data model
+├── formatters.py       # Text and JSON output formatters
+├── runner.py           # Lint orchestrator pipeline
+├── ignores.py          # Ignore pragma parsing and filtering
+├── rules/
+│   ├── __init__.py
+│   ├── base.py         # Rule protocol
+│   ├── registry.py     # Rule registry, get_enabled_rules()
+│   ├── typ001.py       # Missing parameter annotations
+│   ├── typ002.py       # Missing return annotations
+│   ├── typ003.py       # Missing variable annotations
+│   ├── typ010.py       # Legacy typing syntax
+│   ├── kw001.py        # Keyword-only parameters
+│   ├── ret001.py       # Heterogeneous tuple returns
+│   ├── imp001.py       # In-function imports
+│   ├── exp001.py       # Module-level return types
+│   └── exp002.py       # __all__ enforcement
+└── fixers/
     ├── __init__.py
-    ├── base.py
-    ├── imp001.py
-    ├── typ001.py
-    ├── typ002.py
-    ├── typ003.py
-    ├── typ010.py
-    ├── kw001.py
-    └── ret001.py
-
-tests/
-├── conftest.py
-├── test_cli.py
-├── test_config.py
-├── test_diagnostics.py
-├── test_scanner.py
-├── test_parser.py
-├── test_formatters.py
-└── test_runner.py
+    ├── _util.py        # Shared fixer utils (parse, tokenize, validate)
+    ├── pipeline.py     # fix_all() — chains fixers in dependency order
+    ├── typ002.py       # Add -> None (tokenize-based)
+    ├── typ003.py       # Add variable annotations (tokenize-based)
+    ├── typ010.py       # Modernize typing syntax (LibCST-based)
+    ├── kw001.py        # Insert * separator (tokenize, cross-file)
+    └── imp001.py       # Move imports to module level (tokenize-based)
 ```
 
 ---
 
 ## 11. Definition of Done (for v0.1)
 
-- [ ] Lint mode supports: IMP001, TYP001, TYP002, TYP010
-- [ ] Fix mode supports: TYP010 and trivial `-> None` insertions
-- [ ] Ignore pragmas implemented with governance settings
+- [x] Lint mode supports all 9 rules (TYP001-TYP010, KW001, IMP001, RET001, EXP001-002)
+- [x] Fixers implemented: TYP010, TYP002, TYP003, IMP001, KW001
+- [x] Fix pipeline chains fixers in dependency order
+- [x] Ignore pragmas with governance (require_reason, disallow, max_per_file)
 - [x] Config via `pyproject.toml`
 - [x] Deterministic output + JSON output
 - [x] pip installable with `pyguard` CLI
-- [ ] Basic docs + pre-commit example
+- [x] 457 tests, mypy strict, ruff clean
+- [ ] `pyguard fix` CLI command (Phase 5)
+- [ ] `pyguard explain` CLI command (Phase 5)
+- [ ] Logging with `--verbose`/`--debug` (Phase 6)
+- [ ] Tryout mode `--tryout` (Phase 6)
+- [ ] Packaging, pre-commit, CI (Phase 7)
+
+---
+
+## 12. Integration Test Projects
+
+Real-world Python code for smoke-testing PyGuard against untyped/legacy-typed codebases:
+
+| Project | Description | What it exercises |
+|---------|-------------|-------------------|
+| [suurjaak/pyscripts](https://github.com/suurjaak/pyscripts) | 9 small utility scripts (CC0). No types at all, ~100-350 lines each. `db.py` has 18 methods, `duplicates.py` has 6 functions. | TYP001, TYP002, TYP003, KW001, EXP002 |
+| [cdeil/python-cli-examples](https://github.com/cdeil/python-cli-examples) | CLI examples using argparse/click/cliff. Small demo scripts. | TYP001, TYP002, IMP001 |
+| [johnthagen/python-blueprint](https://github.com/johnthagen/python-blueprint) | Best-practices Python project template. Modern but uses legacy typing in some places. | TYP010, EXP002 |
+| Self-lint (`pyguard lint src/`) | Run PyGuard on its own codebase. Should produce zero diagnostics. | All rules — regression test |

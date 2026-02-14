@@ -159,9 +159,6 @@ class TestGetFormatter:
         formatter = get_formatter(output_format=OutputFormat.JSON)
         assert isinstance(formatter, JsonFormatter)
 
-    def test_github_raises_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="GitHub annotation format"):
-            get_formatter(output_format=OutputFormat.GITHUB)
 
 
 class TestFormatSummary:

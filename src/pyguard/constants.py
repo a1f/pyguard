@@ -20,7 +20,6 @@ class OutputFormat(Enum):
 
     TEXT = "text"
     JSON = "json"
-    GITHUB = "github"
 
 
 class ColorMode(Enum):
