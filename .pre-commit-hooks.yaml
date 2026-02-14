@@ -1,0 +1,11 @@
+- id: pyguard-lint
+  name: pyguard lint
+  language: python
+  entry: pyguard lint
+  types: [python]
+
+- id: pyguard-fix
+  name: pyguard fix (check mode)
+  language: python
+  entry: pyguard fix --check
+  types: [python]
