@@ -9,7 +9,8 @@ from typing import Any, Final
 import click
 
 from pyguard.config import load_config
-from pyguard.constants import ColorMode, OutputFormat, __version__
+from pyguard.constants import DEFAULT_SEVERITIES, ColorMode, OutputFormat, __version__
+from pyguard.explain import RULE_CATALOG, format_rule_detail, format_rule_table
 from pyguard.runner import FixResult, fix_paths, format_diff, format_results, lint_paths
 from pyguard.types import ConfigError, PyGuardConfig
 
@@ -243,6 +244,40 @@ def fix(
 
     suffix = "s" if result.files_changed != 1 else ""
     click.echo(f"Fixed {result.files_changed} file{suffix}.")
+
+
+@cli.command()
+@click.argument("rule_code", required=False, default=None)
+@click.option("--all", "show_all", is_flag=True, help="List all rules with summaries")
+@click.pass_context
+def explain(ctx: click.Context, rule_code: str | None, *, show_all: bool) -> None:
+    """Show rule documentation and examples."""
+    cfg: PyGuardConfig = ctx.obj["config"]
+
+    if show_all:
+        severities: dict[str, str] = {
+            code: sev.value for code, sev in cfg.rules.severities.items()
+        }
+        click.echo(format_rule_table(catalog=RULE_CATALOG, severities=severities))
+        return
+
+    if rule_code is None:
+        click.echo("Usage: pyguard explain <RULE_CODE> or pyguard explain --all")
+        ctx.exit(1)
+        return
+
+    code: str = rule_code.upper()
+    if code not in RULE_CATALOG:
+        click.echo(f"Error: Unknown rule code '{code}'.", err=True)
+        ctx.exit(1)
+        return
+
+    sev = DEFAULT_SEVERITIES.get(code)
+    severity_str: str = sev.value if sev is not None else "off"
+    click.echo(format_rule_detail(
+        info=RULE_CATALOG[code],
+        default_severity=severity_str,
+    ))
 
 
 def main() -> None:
