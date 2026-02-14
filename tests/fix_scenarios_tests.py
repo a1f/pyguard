@@ -20,12 +20,11 @@ Fix categories:
 import difflib
 import textwrap
 from pathlib import Path
-from typing import Any
-
 import pytest
 
 from pyguard.fixers.imp001 import fix_local_imports
 from pyguard.fixers.kw001 import FixResult, fix_keyword_only
+from pyguard.fixers.pipeline import fix_all
 from pyguard.fixers.typ002 import fix_missing_return_none
 from pyguard.fixers.typ003 import fix_missing_variable_annotations
 from pyguard.fixers.typ010 import fix_legacy_typing
@@ -1277,112 +1276,10 @@ class TestKW001KeywordOnlyFix:
 
 
 # =============================================================================
-# Rewrite Assist Scenarios (Not Auto-fixed)
-# =============================================================================
-
-
-@pytest.mark.skip(reason="Rewrite assist not yet implemented")
-class TestRewriteAssistScenarios:
-    """
-    Rewrite Assist Scenarios.
-
-    These tests document complex refactoring scenarios that require
-    "rewrite assist" mode. These are NOT auto-fixed but generate
-    structured rewrite plans for agent or human review.
-
-    The rewrite plan includes:
-    - Suggested type/class definition
-    - List of affected return statements
-    - List of affected call sites (within repo)
-    """
-
-    def test_rewrite_tuple_return_to_dataclass(self) -> None:
-        """
-        Scenario: Convert tuple return to dataclass.
-
-        The rewrite assist should suggest creating a dataclass
-        and provide a plan for updating the function.
-        """
-        input_code: str = textwrap.dedent('''\
-            def get_user_info(user_id: int) -> tuple[str, int, bool]:
-                name = "Alice"
-                age = 30
-                active = True
-                return name, age, active
-        ''')
-
-        expected_rewrite_plan: dict[str, Any] = {
-            "rule": "RET001",
-            "action": "rewrite_required",
-            "suggestion": {
-                "type": "dataclass",
-                "name": "UserInfo",
-                "fields": [
-                    {"name": "name", "type": "str"},
-                    {"name": "age", "type": "int"},
-                    {"name": "active", "type": "bool"},
-                ],
-            },
-            "affected_locations": [
-                {"file": "<input>", "line": 5, "type": "return_statement"},
-            ],
-        }
-
-        suggested_output: str = textwrap.dedent('''\
-            from dataclasses import dataclass
-
-            @dataclass(frozen=True, slots=True)
-            class UserInfo:
-                name: str
-                age: int
-                active: bool
-
-            def get_user_info(user_id: int) -> UserInfo:
-                name = "Alice"
-                age = 30
-                active = True
-                return UserInfo(name=name, age=age, active=active)
-        ''')
-
-        _unused = (input_code, expected_rewrite_plan, suggested_output)
-        assert False, "Test not implemented - rewrite assist pending"
-
-    def test_rewrite_tuple_return_to_namedtuple(self) -> None:
-        """
-        Scenario: Convert tuple return to NamedTuple.
-
-        Alternative suggestion using NamedTuple.
-        """
-        input_code: str = textwrap.dedent('''\
-            def divide(a: int, b: int) -> tuple[int, int]:
-                quotient = a // b
-                remainder = a % b
-                return quotient, remainder
-        ''')
-
-        suggested_output: str = textwrap.dedent('''\
-            from typing import NamedTuple
-
-            class DivisionResult(NamedTuple):
-                quotient: int
-                remainder: int
-
-            def divide(a: int, b: int) -> DivisionResult:
-                quotient = a // b
-                remainder = a % b
-                return DivisionResult(quotient=quotient, remainder=remainder)
-        ''')
-
-        _unused = (input_code, suggested_output)
-        assert False, "Test not implemented - rewrite assist pending"
-
-
-# =============================================================================
 # Combined Fix Scenarios
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Combined fixes not yet implemented")
 class TestCombinedFixes:
     """
     Combined Fix Scenarios.
@@ -1422,8 +1319,8 @@ class TestCombinedFixes:
                 print(message)
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - combined fixes pending"
+        actual: str = fix_all(input_code)
+        assert actual == expected_output
 
     def test_fix_preserves_comments(self) -> None:
         """
@@ -1447,8 +1344,8 @@ class TestCombinedFixes:
                 return None
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - comment preservation pending"
+        actual: str = fix_all(input_code)
+        assert actual == expected_output
 
     def test_fix_preserves_docstrings(self) -> None:
         """
@@ -1478,8 +1375,8 @@ class TestCombinedFixes:
                 return ["Alice", "Bob"]
         ''')
 
-        _unused = (input_code, expected_output)
-        assert False, "Test not implemented - docstring preservation pending"
+        actual: str = fix_all(input_code)
+        assert actual == expected_output
 
 
 # =============================================================================
@@ -1487,7 +1384,6 @@ class TestCombinedFixes:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Fix stability tests not yet implemented")
 class TestFixStability:
     """
     Fix Stability Tests.
@@ -1514,18 +1410,17 @@ class TestFixStability:
                 return items[0] if items else None
         ''')
 
-        # Second pass should produce identical output
-        expected_after_second_pass: str = expected_after_first_pass
+        first_pass: str = fix_all(input_code)
+        second_pass: str = fix_all(first_pass)
+        assert first_pass == expected_after_first_pass
+        assert second_pass == first_pass
 
-        _unused = (input_code, expected_after_first_pass, expected_after_second_pass)
-        assert False, "Test not implemented - fix stability pending"
-
-    def test_fix_stable_with_black(self) -> None:
+    def test_fix_output_valid_and_idempotent(self) -> None:
         """
-        Scenario: Fixed code remains stable after Black formatting.
+        Scenario: Fixed code is valid Python and idempotent.
 
-        The fixed code should not change when formatted with Black.
-        This ensures our fixes produce Black-compatible output.
+        The fixed output must compile without errors and a second
+        fix_all pass must produce identical output.
         """
         input_code: str = textwrap.dedent('''\
             from typing import Optional
@@ -1534,17 +1429,16 @@ class TestFixStability:
                 return None
         ''')
 
-        # After pyguard fix
-        after_pyguard_fix: str = textwrap.dedent('''\
+        expected: str = textwrap.dedent('''\
             def find_user(user_id: int) -> str | None:
                 return None
         ''')
 
-        # After Black (should be identical)
-        after_black: str = after_pyguard_fix
-
-        _unused = (input_code, after_pyguard_fix, after_black)
-        assert False, "Test not implemented - Black stability pending"
+        first_pass: str = fix_all(input_code)
+        assert first_pass == expected
+        compile(first_pass, "<test>", "exec")
+        second_pass: str = fix_all(first_pass)
+        assert second_pass == first_pass
 
 
 # =============================================================================
