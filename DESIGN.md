@@ -196,7 +196,7 @@ JSON diagnostics output includes:
 
 | Module | Purpose |
 |--------|---------|
-| `cli.py` | Click CLI with `lint` and `config` commands |
+| `cli.py` | Click CLI with `lint`, `fix`, `explain`, and `config` commands |
 | `config.py` | Config loading and validation from `pyproject.toml` |
 | `constants.py` | Rule codes, enums, defaults |
 | `types.py` | Dataclasses for configuration |
@@ -204,12 +204,13 @@ JSON diagnostics output includes:
 | `parser.py` | AST parsing with syntax error capture |
 | `diagnostics.py` | `Diagnostic`, `SourceLocation`, `DiagnosticCollection` |
 | `formatters.py` | Text and JSON formatters, summary |
-| `runner.py` | Lint orchestrator pipeline (scan → parse → check → ignore) |
+| `runner.py` | Lint + fix orchestrator pipeline |
+| `explain.py` | Rule documentation catalog for explain command |
 | `ignores.py` | Ignore pragma parsing and diagnostic filtering |
 | `rules/*.py` | 9 rule modules + base protocol + registry |
 | `fixers/*.py` | 5 fixer modules + pipeline + shared utils |
 
-**Test coverage:** 457 tests passing across 22 test files. mypy strict and ruff clean.
+**Test coverage:** 503 tests passing across 27 test files. mypy strict and ruff clean.
 
 ---
 
@@ -254,7 +255,7 @@ KW001, RET001, EXP001, EXP002 — detection + KW001 autofix.
 
 ---
 
-### Phase 5 — CLI Commands: fix + explain
+### Phase 5 — CLI Commands: fix + explain [DONE]
 
 Wire the existing fixers into CLI commands and add rule documentation.
 
@@ -303,7 +304,7 @@ Implementation:
 
 ---
 
-### Phase 6 — Logging + Tryout Mode
+### Phase 6 — Logging + Tryout Mode [DONE]
 
 Add observability for debugging and an interactive fix preview workflow.
 
@@ -348,7 +349,7 @@ This is the "suggest edits → user approves → apply" workflow. Combines `--di
 
 ---
 
-### Phase 7 — Packaging & Polish
+### Phase 7 — Packaging & Polish [DONE]
 
 Final polish for public release.
 
@@ -424,12 +425,12 @@ src/pyguard/
 - [x] Config via `pyproject.toml`
 - [x] Deterministic output + JSON output
 - [x] pip installable with `pyguard` CLI
-- [x] 457 tests, mypy strict, ruff clean
-- [ ] `pyguard fix` CLI command (Phase 5)
-- [ ] `pyguard explain` CLI command (Phase 5)
-- [ ] Logging with `--verbose`/`--debug` (Phase 6)
-- [ ] Tryout mode `--tryout` (Phase 6)
-- [ ] Packaging, pre-commit, CI (Phase 7)
+- [x] 503 tests, mypy strict, ruff clean
+- [x] `pyguard fix` CLI command (Phase 5)
+- [x] `pyguard explain` CLI command (Phase 5)
+- [x] Logging with `--verbose`/`--debug` (Phase 6)
+- [x] Tryout mode `--tryout` (Phase 6)
+- [x] Packaging, pre-commit, CI (Phase 7)
 
 ---
 

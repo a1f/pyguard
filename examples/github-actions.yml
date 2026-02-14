@@ -1,0 +1,37 @@
+# Example GitHub Actions workflow for PyGuard
+# Copy this to .github/workflows/pyguard.yml in your project
+
+name: PyGuard
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyGuard
+        run: pip install pyguard
+
+      # Check that all files are properly formatted (fix --check)
+      - name: Check autofixes applied
+        run: pyguard fix --check src/
+
+      # Run full lint pass
+      - name: Lint
+        run: pyguard lint src/
+
+      # Optional: JSON report as artifact
+      - name: Generate JSON report
+        if: always()
+        run: pyguard lint --format json src/ > pyguard-report.json || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pyguard-report
+          path: pyguard-report.json

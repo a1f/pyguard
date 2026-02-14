@@ -26,14 +26,15 @@ pyguard/
 │   └── pyguard/
 │       ├── __init__.py     # Empty (package marker only)
 │       ├── __main__.py     # Enable `python -m pyguard`
-│       ├── cli.py          # CLI entry point (click)
+│       ├── cli.py          # CLI entry point (click) — lint, fix, explain, config
 │       ├── config.py       # Config loading logic
 │       ├── constants.py    # Rule codes, default values, enums
 │       ├── types.py        # Common types and dataclasses
 │       ├── diagnostics.py  # Diagnostic data model
 │       ├── parser.py       # AST parsing with syntax error detection
 │       ├── scanner.py      # File discovery (glob patterns)
-│       ├── runner.py       # Lint runner (scan → parse → check → ignore pipeline)
+│       ├── runner.py       # Lint + fix orchestrator pipeline
+│       ├── explain.py      # Rule documentation catalog for explain command
 │       ├── formatters.py   # Text and JSON output formatters
 │       ├── ignores.py      # Ignore pragma parsing and diagnostic filtering
 │       ├── rules/
@@ -52,6 +53,7 @@ pyguard/
 │       └── fixers/
 │           ├── __init__.py # Empty
 │           ├── _util.py    # Shared fixer utils (parse, tokenize, validate)
+│           ├── pipeline.py # fix_all() — chains fixers in dependency order
 │           ├── typ002.py   # Add -> None (tokenize-based)
 │           ├── typ003.py   # Add variable annotations (tokenize-based)
 │           ├── typ010.py   # Modernize typing syntax (LibCST-based)
@@ -80,7 +82,15 @@ pyguard/
 │   ├── test_diagnostics.py         # Diagnostic model tests
 │   ├── test_formatters.py          # Formatter tests
 │   ├── test_config.py              # Config system tests
-│   └── test_cli.py                 # CLI integration tests
+│   ├── test_cli.py                 # CLI integration tests
+│   ├── test_fix_command.py         # Fix command tests
+│   ├── test_explain.py             # Explain command tests
+│   ├── test_logging.py             # --verbose/--debug flag tests
+│   ├── test_tryout.py              # Fix --tryout mode tests
+│   └── test_pre_commit_hooks.py    # Pre-commit hooks tests
+├── examples/
+│   └── github-actions.yml          # Example CI workflow
+├── .pre-commit-hooks.yaml          # Pre-commit hook definitions
 └── README.md
 ```
 
@@ -107,6 +117,16 @@ Always use the project venv Python:
 ```bash
 # Run linter
 .venv/bin/python -m pyguard lint src/
+
+# Auto-fix files
+.venv/bin/python -m pyguard fix src/
+
+# Preview fixes / CI check
+.venv/bin/python -m pyguard fix src/ --diff
+.venv/bin/python -m pyguard fix src/ --check
+
+# Explain a rule
+.venv/bin/python -m pyguard explain TYP001
 
 # Run tests
 .venv/bin/python -m pytest --tb=short -q
