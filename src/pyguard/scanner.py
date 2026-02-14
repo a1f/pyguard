@@ -1,10 +1,13 @@
 """File discovery for PyGuard using glob patterns."""
 from __future__ import annotations
 
+import logging
 from fnmatch import fnmatch
 from pathlib import Path
 
 from pyguard.types import PyGuardConfig
+
+logger: logging.Logger = logging.getLogger("pyguard.scanner")
 
 
 def _matches_pattern(*, path: Path, patterns: tuple[str, ...], base: Path) -> bool:
@@ -127,10 +130,12 @@ def scan_files(*, paths: tuple[Path, ...], config: PyGuardConfig) -> list[Path]:
 
         # Exclusions take priority
         if _matches_pattern(path=file_path, patterns=config.exclude, base=base):
+            logger.debug("Excluded %s", file_path)
             continue
 
         if _matches_pattern(path=file_path, patterns=config.include, base=base):
             filtered.add(file_path)
 
-    # Return sorted for deterministic output
-    return sorted(filtered)
+    result: list[Path] = sorted(filtered)
+    logger.info("Discovered %d files", len(result))
+    return result

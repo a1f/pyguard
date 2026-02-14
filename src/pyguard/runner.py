@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import difflib
+import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +17,8 @@ from pyguard.rules.base import Rule
 from pyguard.rules.registry import get_enabled_rules
 from pyguard.scanner import scan_files
 from pyguard.types import PyGuardConfig
+
+logger: logging.Logger = logging.getLogger("pyguard.runner")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,11 +51,14 @@ def _syntax_error_to_diagnostic(*, parse_result: ParseResult) -> Diagnostic:
 
 
 def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
+    t0: float = time.monotonic()
     files: list[Path] = scan_files(paths=paths, config=config)
+    logger.info("Found %d files", len(files))
     collection: DiagnosticCollection = DiagnosticCollection()
     rules: list[Rule] = get_enabled_rules(config=config)
 
     for file in files:
+        logger.debug("Checking %s", file)
         result: ParseResult = parse_file(file=file)
         if result.syntax_error is not None:
             collection.add(
@@ -61,9 +68,11 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
 
         file_diagnostics: list[Diagnostic] = []
         for rule in rules:
-            file_diagnostics.extend(
-                rule.check(parse_result=result, config=config),
+            rule_diags: list[Diagnostic] = rule.check(
+                parse_result=result, config=config,
             )
+            logger.debug("  %s: %d diagnostics", rule.code, len(rule_diags))
+            file_diagnostics.extend(rule_diags)
 
         filtered: list[Diagnostic] = apply_ignores(
             diagnostics=file_diagnostics,
@@ -72,6 +81,13 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
         )
         collection.add_all(diagnostics=filtered)
 
+    elapsed: float = time.monotonic() - t0
+    logger.info(
+        "Completed in %.2fs (%d files, %d diagnostics)",
+        elapsed,
+        len(files),
+        len(collection),
+    )
     exit_code: int = 1 if collection.has_errors else 0
     return LintResult(
         diagnostics=collection,
@@ -82,10 +98,13 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
 
 def fix_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> FixResult:
     """Apply all safe autofixes to files matching the config patterns."""
+    t0: float = time.monotonic()
     files: list[Path] = scan_files(paths=paths, config=config)
+    logger.info("Found %d files to fix", len(files))
     changes: dict[Path, tuple[str, str]] = {}
 
     for file in files:
+        logger.debug("Fixing %s", file)
         try:
             old: str = file.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -93,8 +112,16 @@ def fix_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> FixResult:
 
         new: str = fix_all(old)
         if new != old:
+            logger.debug("  Changed: %s", file)
             changes[file] = (old, new)
 
+    elapsed: float = time.monotonic() - t0
+    logger.info(
+        "Fix completed in %.2fs (%d files, %d changed)",
+        elapsed,
+        len(files),
+        len(changes),
+    )
     return FixResult(
         files_checked=len(files),
         files_changed=len(changes),

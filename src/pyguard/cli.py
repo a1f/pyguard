@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Final
@@ -119,9 +121,26 @@ CONFIG_TYPE: Final[ConfigType] = ConfigType()
     default=None,
     help="Path to pyproject.toml (default: search upward from current directory)",
 )
+@click.option("--verbose", is_flag=True, help="Show progress and timing")
+@click.option("--debug", is_flag=True, help="Show detailed trace")
 @click.pass_context
-def cli(ctx: click.Context, *, config_path: Path | None) -> None:
+def cli(
+    ctx: click.Context,
+    *,
+    config_path: Path | None,
+    verbose: bool,
+    debug: bool,
+) -> None:
     """PyGuard - A strict Python linter for typing, APIs, and structured returns."""
+    level: int = (
+        logging.DEBUG if debug else logging.INFO if verbose else logging.WARNING
+    )
+    logging.basicConfig(
+        level=level,
+        format="%(name)s: %(message)s",
+        stream=sys.stderr,
+    )
+
     ctx.ensure_object(dict)
     try:
         cfg: PyGuardConfig = load_config(path=config_path)
