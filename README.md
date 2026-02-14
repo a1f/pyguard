@@ -207,6 +207,93 @@ jobs:
           path: pyguard-report.json
 ```
 
+## Try It on Real Projects
+
+The `examples/` directory includes two open-source projects for hands-on testing.
+Clone them and run PyGuard to see what it finds and what it can fix.
+
+### Setup
+
+```bash
+git clone https://github.com/your-org/pyguard.git
+cd pyguard
+python -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+
+# Clone example projects
+git clone --depth 1 https://github.com/suurjaak/pyscripts.git examples/pyscripts
+git clone --depth 1 https://github.com/cdeil/python-cli-examples.git examples/python-cli-examples
+```
+
+### 1. pyscripts — untyped utility scripts
+
+Nine small Python scripts with zero type annotations (~100-350 lines each).
+Exercises TYP001, TYP002, TYP003, KW001.
+
+```bash
+# Lint — see all diagnostics
+pyguard lint examples/pyscripts/
+# Expected: ~146 errors, ~47 warnings across 8 files
+
+# Preview what the fixer would change
+pyguard fix examples/pyscripts/ --diff
+
+# Walk through fixes interactively
+pyguard fix examples/pyscripts/ --tryout
+
+# Apply all fixes at once
+pyguard fix examples/pyscripts/
+
+# Re-lint to see what's left (parameter annotations are not auto-fixed)
+pyguard lint examples/pyscripts/
+```
+
+What the fixer does here:
+- Adds `-> None` return annotations to functions that don't return (TYP002)
+- Adds type annotations to module-level variables like `result: str = ...` (TYP003)
+
+What stays unfixed (needs manual work):
+- Missing parameter annotations (TYP001) — too ambiguous to infer
+- Keyword-only parameter suggestions (KW001) — API-breaking change
+- 2 files with Python 2 syntax errors (SYN001) — skipped safely
+
+### 2. python-cli-examples — CLI demo scripts
+
+Small CLI examples using argparse, click, and cliff. Missing type annotations
+and some in-function imports. Exercises TYP001, TYP002, IMP001.
+
+```bash
+# Lint — see all diagnostics
+pyguard lint examples/python-cli-examples/
+# Expected: ~41 errors, ~7 warnings across 19 files
+
+# Preview fixes
+pyguard fix examples/python-cli-examples/ --diff
+
+# Apply fixes
+pyguard fix examples/python-cli-examples/
+
+# Re-lint to see remaining issues
+pyguard lint examples/python-cli-examples/
+```
+
+What the fixer does here:
+- Adds `-> None` to functions and test methods (TYP002)
+- Moves in-function imports to the top of the file (IMP001) — e.g. in
+  `argparse/greet/cli/main.py`, `from .hello import ...` gets moved out
+  of `main()` to module level
+
+### 3. Self-lint
+
+PyGuard's own codebase passes clean (zero errors, warnings only for
+overridden external methods and library compatibility):
+
+```bash
+pyguard lint src/
+# Expected: 0 errors, a few KW001 warnings for LibCST/Click overrides.
+#           Checked 33 files. Exit code 0.
+```
+
 ## Development
 
 ```bash
@@ -216,13 +303,18 @@ cd pyguard
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 
-# Run tests
+# Run tests (503 tests)
 .venv/bin/python -m pytest
 
 # Type checking
 .venv/bin/python -m mypy src/ --strict
 
 # Lint
+.venv/bin/python -m ruff check src/
+
+# Full validation gate
+.venv/bin/python -m pytest --tb=short -q && \
+.venv/bin/python -m mypy src/ --strict && \
 .venv/bin/python -m ruff check src/
 ```
 
