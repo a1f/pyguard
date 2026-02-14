@@ -1,11 +1,13 @@
 """Lint orchestrator for PyGuard."""
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass
 from pathlib import Path
 
 from pyguard.constants import SYNTAX_ERROR_CODE, Severity
 from pyguard.diagnostics import Diagnostic, DiagnosticCollection, SourceLocation
+from pyguard.fixers.pipeline import fix_all
 from pyguard.formatters import Formatter, format_summary, get_formatter
 from pyguard.ignores import apply_ignores
 from pyguard.parser import ParseResult, SyntaxErrorInfo, parse_file
@@ -20,6 +22,14 @@ class LintResult:
     diagnostics: DiagnosticCollection
     files_checked: int
     exit_code: int
+
+
+@dataclass(frozen=True, slots=True)
+class FixResult:
+    files_checked: int
+    files_changed: int
+    exit_code: int
+    changes: dict[Path, tuple[str, str]]  # path -> (old, new)
 
 
 def _syntax_error_to_diagnostic(*, parse_result: ParseResult) -> Diagnostic:
@@ -68,6 +78,42 @@ def lint_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> LintResult:
         files_checked=len(files),
         exit_code=exit_code,
     )
+
+
+def fix_paths(*, paths: tuple[Path, ...], config: PyGuardConfig) -> FixResult:
+    """Apply all safe autofixes to files matching the config patterns."""
+    files: list[Path] = scan_files(paths=paths, config=config)
+    changes: dict[Path, tuple[str, str]] = {}
+
+    for file in files:
+        try:
+            old: str = file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        new: str = fix_all(old)
+        if new != old:
+            changes[file] = (old, new)
+
+    return FixResult(
+        files_checked=len(files),
+        files_changed=len(changes),
+        exit_code=0,
+        changes=changes,
+    )
+
+
+def format_diff(*, path: Path, old: str, new: str) -> str:
+    """Generate a unified diff string for a single file change."""
+    old_lines: list[str] = old.splitlines(keepends=True)
+    new_lines: list[str] = new.splitlines(keepends=True)
+    diff: list[str] = list(difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=str(path),
+        tofile=str(path),
+    ))
+    return "".join(diff)
 
 
 def format_results(*, result: LintResult, config: PyGuardConfig) -> str:

@@ -10,7 +10,7 @@ import click
 
 from pyguard.config import load_config
 from pyguard.constants import ColorMode, OutputFormat, __version__
-from pyguard.runner import format_results, lint_paths
+from pyguard.runner import FixResult, fix_paths, format_diff, format_results, lint_paths
 from pyguard.types import ConfigError, PyGuardConfig
 
 
@@ -198,6 +198,51 @@ def lint(
     if output:
         click.echo(output)
     ctx.exit(result.exit_code)
+
+
+@cli.command()
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
+@click.option("--diff", "show_diff", is_flag=True, help="Print unified diff, don't write files")
+@click.option("--check", "check_only", is_flag=True, help="Exit 1 if any file would change")
+@click.pass_context
+def fix(
+    ctx: click.Context,
+    paths: tuple[Path, ...],
+    *,
+    show_diff: bool,
+    check_only: bool,
+) -> None:
+    """Apply safe autofixes to Python files."""
+    cfg: PyGuardConfig = ctx.obj["config"]
+
+    if not paths:
+        paths = (Path("."),)
+
+    result: FixResult = fix_paths(paths=paths, config=cfg)
+
+    if show_diff:
+        for path in sorted(result.changes):
+            old, new = result.changes[path]
+            click.echo(format_diff(path=path, old=old, new=new), nl=False)
+        suffix: str = "s" if result.files_changed != 1 else ""
+        click.echo(f"{result.files_changed} file{suffix} would be changed.")
+        return
+
+    if check_only:
+        suffix = "s" if result.files_changed != 1 else ""
+        if result.files_changed > 0:
+            click.echo(f"{result.files_changed} file{suffix} would be changed.")
+            ctx.exit(1)
+        else:
+            click.echo("No changes needed.")
+        return
+
+    # Default: write changed files in-place
+    for path, (_, new) in result.changes.items():
+        path.write_text(new, encoding="utf-8")
+
+    suffix = "s" if result.files_changed != 1 else ""
+    click.echo(f"Fixed {result.files_changed} file{suffix}.")
 
 
 def main() -> None:
