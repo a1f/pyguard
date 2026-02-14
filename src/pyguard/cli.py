@@ -224,6 +224,7 @@ def lint(
 @click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
 @click.option("--diff", "show_diff", is_flag=True, help="Print unified diff, don't write files")
 @click.option("--check", "check_only", is_flag=True, help="Exit 1 if any file would change")
+@click.option("--tryout", is_flag=True, help="Interactively approve each fix")
 @click.pass_context
 def fix(
     ctx: click.Context,
@@ -231,8 +232,18 @@ def fix(
     *,
     show_diff: bool,
     check_only: bool,
+    tryout: bool,
 ) -> None:
     """Apply safe autofixes to Python files."""
+    exclusive: int = sum([show_diff, check_only, tryout])
+    if exclusive > 1:
+        click.echo(
+            "Error: --diff, --check, and --tryout are mutually exclusive.",
+            err=True,
+        )
+        ctx.exit(2)
+        return
+
     cfg: PyGuardConfig = ctx.obj["config"]
 
     if not paths:
@@ -257,12 +268,52 @@ def fix(
             click.echo("No changes needed.")
         return
 
+    if tryout:
+        _tryout_loop(result=result)
+        return
+
     # Default: write changed files in-place
     for path, (_, new) in result.changes.items():
         path.write_text(new, encoding="utf-8")
 
     suffix = "s" if result.files_changed != 1 else ""
     click.echo(f"Fixed {result.files_changed} file{suffix}.")
+
+
+def _tryout_loop(*, result: FixResult) -> None:
+    """Interactive approval loop for fix --tryout."""
+    applied: int = 0
+    total: int = result.files_changed
+    apply_all: bool = False
+
+    for path in sorted(result.changes):
+        old, new = result.changes[path]
+        click.echo(format_diff(path=path, old=old, new=new), nl=False)
+
+        if apply_all:
+            path.write_text(new, encoding="utf-8")
+            applied += 1
+            continue
+
+        choice: str = click.prompt(
+            "Apply?",
+            type=click.Choice(["y", "n", "a", "q"]),
+            default="y",
+        )
+
+        if choice == "y":
+            path.write_text(new, encoding="utf-8")
+            applied += 1
+        elif choice == "a":
+            path.write_text(new, encoding="utf-8")
+            applied += 1
+            apply_all = True
+        elif choice == "q":
+            break
+        # "n" -> skip
+
+    suffix: str = "s" if applied != 1 else ""
+    click.echo(f"Applied {applied} of {total} file{suffix}.")
 
 
 @cli.command()
