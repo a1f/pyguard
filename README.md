@@ -33,6 +33,69 @@ pyguard fix src/ --check
 pyguard explain TYP001
 ```
 
+## Example: Before and After
+
+Given this file (`app.py`):
+
+```python
+from typing import Optional, List
+import os
+
+def connect(host, port, timeout=30) -> Optional[object]:
+    import socket
+    sock = socket.create_connection((host, port), timeout)
+    return sock
+
+def log_message(msg):
+    print(f"[LOG] {msg}")
+
+MAX_RETRIES = 3
+```
+
+### Lint output
+
+```
+$ pyguard lint app.py
+
+app.py:4:13: ERROR [TYP001] Missing type annotation for parameter 'host'
+app.py:4:19: ERROR [TYP001] Missing type annotation for parameter 'port'
+app.py:4:25: ERROR [TYP001] Missing type annotation for parameter 'timeout'
+app.py:4:40: ERROR [TYP010] Use 'object | None' instead of 'Optional[object]'
+app.py:5:5:  ERROR [IMP001] Import 'socket' should be at module level, not inside function
+app.py:9:1:  ERROR [TYP002] Missing return type annotation for function 'log_message'
+app.py:9:17: ERROR [TYP001] Missing type annotation for parameter 'msg'
+app.py:4:1:  WARN  [KW001]  Function 'connect' should use keyword-only parameters
+app.py:12:1: WARN  [TYP003] Missing type annotation for module-level variable 'MAX_RETRIES'
+
+Found 7 errors, 2 warnings.
+```
+
+### After `pyguard fix app.py`
+
+```python
+import socket
+
+import os
+
+def connect(host, port, timeout=30) -> object | None:
+    sock = socket.create_connection((host, port), timeout)
+    return sock
+
+def log_message(msg) -> None:
+    print(f"[LOG] {msg}")
+
+MAX_RETRIES: int = 3
+```
+
+Four fixes applied automatically:
+- **TYP010**: `Optional[object]` -> `object | None` (removed unused `typing` import)
+- **IMP001**: `import socket` moved from inside the function to module level
+- **TYP002**: Added `-> None` return annotation to `log_message`
+- **TYP003**: Added `: int` type annotation to `MAX_RETRIES`
+
+The remaining TYP001 errors (missing parameter annotations) require manual work --
+parameter types are too ambiguous to infer safely.
+
 ## Commands
 
 ### `pyguard lint`
