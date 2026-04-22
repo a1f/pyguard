@@ -8,12 +8,6 @@ A strict Python linter enforcing typing, keyword-only APIs, and structured retur
 pip install pyguard
 ```
 
-For autofix support (includes LibCST for complex transforms):
-
-```bash
-pip install pyguard[fix]
-```
-
 ## Quick Start
 
 ```bash

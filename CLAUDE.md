@@ -12,7 +12,7 @@ PyGuard is a strict Python linter enforcing typing, keyword-only APIs, and struc
 - **Testing**: pytest, pytest-cov
 - **Type Checking**: mypy (strict mode)
 - **Linting**: ruff
-- **CST Rewriting**: libcst (optional `[fix]` dependency, used by TYP010 fixer)
+- **CST Rewriting**: libcst (required dependency, used by TYP010 fixer)
 
 ## Project Structure
 

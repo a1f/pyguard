@@ -1,12 +1,7 @@
 """TYP010 fixer: Modernize legacy typing syntax using LibCST."""
 from __future__ import annotations
 
-try:
-    import libcst as cst
-
-    _HAS_LIBCST: bool = True
-except ImportError:
-    _HAS_LIBCST = False
+import libcst as cst
 
 _BUILTIN_REPLACEMENTS: dict[str, str] = {
     "List": "list",
@@ -31,10 +26,8 @@ def fix_legacy_typing(source: str) -> str:
     - ``List[T]`` → ``list[T]``, ``Dict[K, V]`` → ``dict[K, V]``, etc.
 
     Also removes typing imports that become unused after the transformation.
-    Returns the source unchanged if libcst is not installed or on parse error.
+    Returns the source unchanged on parse error.
     """
-    if not _HAS_LIBCST:
-        return source
     if not source.strip():
         return source
 
