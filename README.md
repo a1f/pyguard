@@ -4,9 +4,35 @@ A strict Python linter enforcing typing, keyword-only APIs, and structured retur
 
 ## Installation
 
+PyGuard is not published to PyPI (the `pyguard` name there belongs to an unrelated
+project — `pip install pyguard` installs the wrong package). Install it straight
+from GitHub with [uv](https://docs.astral.sh/uv/):
+
 ```bash
-pip install pyguard
+uv tool install git+https://github.com/a1f/pyguard
 ```
+
+This puts the `pyguard` command on your PATH in its own isolated environment.
+To update to the latest commit later:
+
+```bash
+uv tool upgrade pyguard
+```
+
+Alternatives:
+
+```bash
+# pipx works the same way
+pipx install git+https://github.com/a1f/pyguard
+
+# Run one-off without installing (handy for CI)
+uvx --from git+https://github.com/a1f/pyguard pyguard lint src/
+
+# Pin a branch, tag, or commit
+uv tool install git+https://github.com/a1f/pyguard@v0.1.0
+```
+
+For working on PyGuard itself, see [Development](#development).
 
 ## Quick Start
 
@@ -232,7 +258,7 @@ Add to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/your-org/pyguard
+  - repo: https://github.com/a1f/pyguard
     rev: v0.1.0
     hooks:
       - id: pyguard-lint
@@ -254,7 +280,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pyguard
+      - run: pip install git+https://github.com/a1f/pyguard
       - run: pyguard fix --check src/
       - run: pyguard lint --format json src/ > pyguard-report.json
       - uses: actions/upload-artifact@v4
@@ -272,7 +298,7 @@ Clone them and run PyGuard to see what it finds and what it can fix.
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/pyguard.git
+git clone https://github.com/a1f/pyguard.git
 cd pyguard
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
@@ -355,7 +381,7 @@ pyguard lint src/
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/pyguard.git
+git clone https://github.com/a1f/pyguard.git
 cd pyguard
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
@@ -373,6 +399,10 @@ python -m venv .venv
 .venv/bin/python -m pytest --tb=short -q && \
 .venv/bin/python -m mypy src/ --strict && \
 .venv/bin/python -m ruff check src/
+
+# Optional: expose your working copy as the global `pyguard` command.
+# Editable, so code changes (or a `git pull`) apply immediately — no reinstall.
+uv tool install --editable .
 ```
 
 ## License
